@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verification Result</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #111;
+            color: #eee;
+            margin: 0;
+        }
+        .top {
+            background: #222;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .main {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+        }
+        .preview {
+            height: 250px;
+            background: #000;
+            border: 1px solid #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .box {
+            background: #1e1e1e;
+            border: 1px solid #444;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .grid {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .grid div {
+            flex: 1;
+            background: #1e1e1e;
+            border: 1px solid #444;
+            padding: 15px;
+        }
+        .progress {
+            font-family: monospace;
+            margin: 8px 0;
+        }
+        button {
+            padding: 8px 14px;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="top">
+        <button onclick="history.back()">Back</button>
+        <b>Verification Result</b>
+        <div></div>
+    </div>
+    <div class="main">
+        <h3>Media Preview</h3>
+        <div class="preview">Video / Image Preview</div>
+        <div class="box">
+            <h3>Authenticity Score</h3>
+            <h2 style="color:orange">78% REAL</h2>
+            <div class="progress">██████████████████░░░░</div>
+            <p><b>Result:</b> Possibly Manipulated</p>
+        </div>
+        <div class="grid">
+            <div>
+                <h3>AI Detection Report</h3>
+                <p>Face Analysis : 61% Deepfake</p>
+                <p>Audio Analysis : 42% Clone Risk</p>
+                <p>Metadata : Altered</p>
+                <p>GAN Pattern : Detected</p>
+            </div>
+            <div>
+                <h3>Tampering Indicators</h3>
+                <ul>
+                    <li>Face blending artifacts</li>
+                    <li>Unnatural eye blinking</li>
+                    <li>Frame inconsistencies</li>
+                    <li>Audio irregularities</li>
+                </ul>
+            </div>
+        </div>
+        <div class="box">
+            <button>Download Report</button>
+            <button>Share Result</button>
+        </div>
+    </div>
+</body>
+</html>
