@@ -1,0 +1,9 @@
+# Python ML service — deploy this separately on Railway or Render
+ml-service/
+
+# Local dev scripts
+start.bat
+*.bat
+
+# Docs
+*.md

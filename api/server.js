@@ -62,10 +62,16 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'something went wrong' })
 })
 
-const PORT = process.env.PORT || 3000
-app.listen(PORT, () => {
-  console.log(`[server] running on port ${PORT}`)
-  console.log(`[server] ml service -> ${process.env.ML_SERVICE_URL}`)
-  console.log(`[server] firebase: ${firebase.isReady() ? 'connected' : 'offline'}`)
-  console.log(`[server] supabase: ${supabase.isReady() ? 'connected' : 'offline'}`)
-})
+// Local dev: start the server directly
+// Vercel: exports app as a serverless function handler
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000
+  app.listen(PORT, () => {
+    console.log(`[server] running on port ${PORT}`)
+    console.log(`[server] ml service -> ${process.env.ML_SERVICE_URL}`)
+    console.log(`[server] firebase: ${firebase.isReady() ? 'connected' : 'offline'}`)
+    console.log(`[server] supabase: ${supabase.isReady() ? 'connected' : 'offline'}`)
+  })
+}
+
+module.exports = app

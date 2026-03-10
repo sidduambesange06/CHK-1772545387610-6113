@@ -4,7 +4,11 @@
 //   Render:   https://your-app.onrender.com
 //   Railway:  https://your-app.up.railway.app
 
-const BACKEND = 'http://localhost:3000'
+// Auto-detect: on Vercel the API is the same origin as the frontend.
+// Locally it's port 3000.
+const BACKEND = (typeof window !== 'undefined' && window.location.hostname !== 'localhost')
+  ? window.location.origin
+  : 'http://localhost:3000'
 const API = BACKEND + '/api'
 
 // Firebase config (same across all pages)

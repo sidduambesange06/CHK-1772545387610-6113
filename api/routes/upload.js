@@ -8,8 +8,10 @@ const db = require('../config/database')
 
 const router = express.Router()
 
-// make sure uploads folder exists
-const uploadDir = path.join(__dirname, '../uploads')
+// On Vercel only /tmp is writable. Locally use api/uploads/
+const uploadDir = process.env.VERCEL
+  ? '/tmp/forensicai-uploads'
+  : path.join(__dirname, '../uploads')
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
 
 const storage = multer.diskStorage({
@@ -39,7 +41,9 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
   const fileId = uuidv4()
   const { filename } = req.file
-  const filePath = `uploads/${filename}`
+  // Use absolute path so analyze.js can find the file regardless of working directory
+  // (critical on Vercel where files live in /tmp, not api/uploads/)
+  const filePath = req.file.path
 
   // compute SHA-256 hash of the file for evidence chain
   const fileBuffer = fs.readFileSync(req.file.path)
