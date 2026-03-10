@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepScan - Deepfake X-Ray</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; background: #0a0a0f; color: #eee; margin: 0; }
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal; font-style: normal; font-size: 22px;
+            display: inline-flex; line-height: 1; text-transform: none;
+            letter-spacing: normal; word-wrap: normal; white-space: nowrap;
+            direction: ltr; -webkit-font-smoothing: antialiased;
+        }
+        .top-nav {
+            background: linear-gradient(135deg, #0f172a 0%, #1a2744 100%);
+            padding: 0 30px; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #1e3a5f; height: 60px;
+        }
+        .top-nav .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .top-nav .logo .logo-icon { color: #2563eb; font-size: 28px; }
+        .top-nav .logo span { color: white; font-size: 18px; font-weight: 900; letter-spacing: -0.3px; }
+        .top-nav .nav-links { display: flex; align-items: center; gap: 28px; }
+        .top-nav .nav-links a { color: #94a3b8; text-decoration: none; font-size: 13px; font-weight: 500; transition: color 0.2s; }
+        .top-nav .nav-links a:hover { color: white; }
+        .top-nav .nav-links a.active { color: #60a5fa; font-weight: 700; }
+        .top-nav .nav-actions { display: flex; align-items: center; gap: 8px; }
+        .top-nav .nav-actions .nav-btn {
+            background: none; border: none; color: #94a3b8; cursor: pointer;
+            padding: 8px; border-radius: 8px; transition: background 0.2s; display: flex;
+        }
+        .top-nav .nav-actions .nav-btn:hover { background: rgba(255,255,255,0.08); color: white; }
+        .top-nav .avatar {
+            width: 34px; height: 34px; border-radius: 50%;
+            background: rgba(37,99,235,0.25); border: 1px solid rgba(37,99,235,0.5);
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            color: #60a5fa; transition: background 0.2s;
+        }
+        .top-nav .avatar:hover { background: rgba(37,99,235,0.4); }
+
+        .main { max-width: 1100px; margin: auto; padding: 20px; }
+
+        /* ── VERDICT BANNER ── */
+        .verdict-banner {
+            padding: 20px 28px; border-radius: 10px; margin-bottom: 20px;
+            display: flex; align-items: center; justify-content: space-between;
+            backdrop-filter: blur(10px); position: relative; overflow: hidden;
+        }
+        .verdict-banner::before {
+            content: ''; position: absolute; inset: 0; opacity: 0.06;
+            background: repeating-linear-gradient(45deg, transparent, transparent 10px, currentColor 10px, currentColor 11px);
+        }
+        .verdict-banner.manipulated { background: rgba(239,68,68,0.12); border: 1px solid #ef4444; color: #ef4444; }
+        .verdict-banner.suspicious  { background: rgba(245,158,11,0.12); border: 1px solid #f59e0b; color: #f59e0b; }
+        .verdict-banner.authentic   { background: rgba(34,197,94,0.12);  border: 1px solid #22c55e; color: #22c55e; }
+        .verdict-label { font-size: 32px; font-weight: 900; letter-spacing: 2px; }
+        .verdict-sub { font-size: 13px; color: #aaa; margin-top: 4px; }
+        .verdict-meta { text-align: right; font-size: 12px; color: #888; }
+
+        /* ── FORENSIC X-RAY VIEWER (the hero) ── */
+        .xray-section {
+            background: linear-gradient(135deg, #111118 0%, #0d1117 100%);
+            border: 1px solid #1e3a5f; border-radius: 10px; padding: 0;
+            margin-bottom: 20px; overflow: hidden;
+        }
+        .xray-header {
+            padding: 16px 24px; border-bottom: 1px solid #1e3a5f;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .xray-header h3 {
+            margin: 0; font-size: 16px; color: #8ab4f8;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .xray-badge {
+            font-size: 10px; background: #8ab4f8; color: #0a0a0f;
+            padding: 2px 8px; border-radius: 10px; font-weight: 700;
+        }
+
+        /* layer toggle buttons */
+        .layer-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .layer-btn {
+            padding: 6px 14px; border-radius: 20px; border: 1px solid #333;
+            background: transparent; color: #aaa; font-size: 12px; cursor: pointer;
+            transition: all 0.2s; font-weight: 600;
+        }
+        .layer-btn:hover { border-color: #8ab4f8; color: #8ab4f8; }
+        .layer-btn.active { background: #8ab4f8; color: #0a0a0f; border-color: #8ab4f8; }
+
+        /* the image viewer */
+        .xray-viewer {
+            position: relative; background: #000; min-height: 350px;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+        }
+        .xray-viewer img {
+            max-width: 100%; max-height: 500px; display: block;
+            transition: opacity 0.4s ease;
+        }
+        .xray-viewer .overlay-img {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            object-fit: contain; pointer-events: none;
+            opacity: 0; transition: opacity 0.4s ease;
+        }
+        .xray-viewer .overlay-img.visible { opacity: 0.75; }
+
+        /* region grid hover overlay */
+        .region-overlay {
+            position: absolute; inset: 0; display: grid;
+            pointer-events: all; opacity: 0; transition: opacity 0.3s;
+        }
+        .region-overlay.visible { opacity: 1; }
+        .region-cell {
+            border: 1px solid rgba(255,255,255,0.05); cursor: crosshair;
+            transition: background 0.15s; position: relative;
+        }
+        .region-cell:hover { background: rgba(255,255,255,0.08); }
+        .region-tooltip {
+            display: none; position: absolute; bottom: 100%; left: 50%;
+            transform: translateX(-50%); background: rgba(0,0,0,0.9);
+            color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 11px;
+            white-space: nowrap; z-index: 10; pointer-events: none;
+        }
+        .region-cell:hover .region-tooltip { display: block; }
+
+        /* opacity slider */
+        .xray-controls {
+            padding: 12px 24px; border-top: 1px solid #1e3a5f;
+            display: flex; align-items: center; gap: 16px; font-size: 12px; color: #888;
+        }
+        .xray-controls input[type=range] {
+            flex: 1; max-width: 200px; accent-color: #8ab4f8;
+        }
+
+        /* ── 3-ENGINE CROSS-EXAMINATION ── */
+        .engines-section {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+            margin-bottom: 20px;
+        }
+        .engine-card {
+            background: #111118; border: 1px solid #222; border-radius: 10px;
+            padding: 20px; text-align: center; position: relative;
+            overflow: hidden; transition: border-color 0.3s;
+        }
+        .engine-card:hover { border-color: #444; }
+        .engine-card.verdict-fake { border-color: #ef4444; }
+        .engine-card.verdict-suspicious { border-color: #f59e0b; }
+        .engine-card.verdict-authentic { border-color: #22c55e; }
+        .engine-icon { font-size: 28px; margin-bottom: 8px; }
+        .engine-name { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+        .engine-verdict {
+            font-size: 18px; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 1px; margin-bottom: 6px;
+        }
+        .engine-verdict.fake { color: #ef4444; }
+        .engine-verdict.suspicious { color: #f59e0b; }
+        .engine-verdict.authentic { color: #22c55e; }
+        .engine-verdict.neutral, .engine-verdict.unknown { color: #666; }
+        .engine-detail { font-size: 11px; color: #666; line-height: 1.6; }
+
+        /* animated scanning line on engine cards */
+        .engine-card::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, currentColor, transparent);
+            animation: scanLine 3s ease-in-out infinite;
+        }
+        .engine-card.verdict-fake::after { color: #ef4444; }
+        .engine-card.verdict-suspicious::after { color: #f59e0b; }
+        .engine-card.verdict-authentic::after { color: #22c55e; }
+        @keyframes scanLine { 0%{left:-100%} 50%{left:100%} 100%{left:100%} }
+
+        /* ── SCORE BREAKDOWN ── */
+        .scores-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .score-card {
+            background: #111118; border: 1px solid #222; border-radius: 8px; padding: 14px;
+        }
+        .score-card h4 { margin: 0 0 8px; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+        .score-val { font-size: 28px; font-weight: 800; margin-bottom: 6px; }
+        .score-bar { height: 4px; background: #222; border-radius: 2px; overflow: hidden; }
+        .score-bar-fill { height: 100%; border-radius: 2px; transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .score-bar-fill.red { background: linear-gradient(90deg, #dc2626, #ef4444); }
+        .score-bar-fill.orange { background: linear-gradient(90deg, #d97706, #f59e0b); }
+        .score-bar-fill.green { background: linear-gradient(90deg, #16a34a, #22c55e); }
+        .score-bar-fill.blue { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+        .score-sub { font-size: 10px; color: #555; margin-top: 4px; }
+
+        /* ── EXPLANATION + FORENSIC DETAILS ── */
+        .detail-card {
+            background: #111118; border: 1px solid #222; border-radius: 10px;
+            padding: 20px; margin-bottom: 16px;
+        }
+        .detail-card h3 {
+            margin: 0 0 14px; font-size: 13px; color: #8ab4f8;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .reason-line {
+            padding: 6px 0; border-bottom: 1px solid #1a1a1a;
+            font-size: 13px; color: #bbb; display: flex; align-items: center; gap: 8px;
+        }
+        .reason-line:last-child { border-bottom: none; }
+        .reason-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .reason-dot.high { background: #ef4444; }
+        .reason-dot.med { background: #f59e0b; }
+        .reason-dot.low { background: #22c55e; }
+
+        .conclusion-text {
+            font-size: 15px; color: #eee; font-weight: 600;
+            line-height: 1.5; margin-bottom: 12px;
+            padding: 12px 16px; background: rgba(138,180,248,0.06);
+            border-left: 3px solid #8ab4f8; border-radius: 0 6px 6px 0;
+        }
+
+        .hash-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; border-bottom: 1px solid #1a1a1a; }
+        .hash-row:last-child { border-bottom: none; }
+        .hash-label { color: #666; }
+        .hash-val { color: #aaa; font-family: 'Courier New', monospace; font-size: 11px; }
+
+        /* ── ACTIONS ── */
+        .actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+        .btn {
+            padding: 10px 22px; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 13px; font-weight: 700;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        .btn:hover { transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .btn-primary { background: #1e3a5f; color: #8ab4f8; }
+        .btn-success { background: #166534; color: #4ade80; }
+        .btn-outline { background: transparent; color: #666; border: 1px solid #333; }
+
+        .summary-box {
+            background: #111118; border: 1px solid #222; padding: 16px;
+            border-radius: 8px; margin-top: 16px; font-size: 13px;
+            line-height: 1.7; color: #bbb; white-space: pre-wrap;
+        }
+
+        .no-data { color: #555; text-align: center; padding: 80px 20px; }
+        .no-data a { color: #8ab4f8; }
+
+        /* ── ANIMATIONS ── */
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeInUp 0.5s ease forwards; }
+        .delay-1 { animation-delay: 0.1s; opacity: 0; }
+        .delay-2 { animation-delay: 0.2s; opacity: 0; }
+        .delay-3 { animation-delay: 0.3s; opacity: 0; }
+        .delay-4 { animation-delay: 0.4s; opacity: 0; }
+
+        /* responsive */
+        @media (max-width: 768px) {
+            .engines-section { grid-template-columns: 1fr; }
+            .scores-grid { grid-template-columns: 1fr 1fr; }
+            .layer-btns { justify-content: center; }
+            .xray-header { flex-direction: column; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <a href="index.html" class="logo">
+            <span class="material-symbols-outlined logo-icon">fingerprint</span>
+            <span>Deepfake AI</span>
+        </a>
+        <div class="nav-links">
+            <a href="index.html">Dashboard</a>
+            <a href="dashboard.html">Analysis</a>
+            <a href="results.html" class="active">Results</a>
+            <a href="reports.html">Reports</a>
+            <a href="settings.html">Settings</a>
+        </div>
+        <div class="nav-actions">
+            <button class="nav-btn" onclick="window.location.href='settings.html'" title="Settings">
+                <span class="material-symbols-outlined">settings</span>
+            </button>
+            <div class="avatar" onclick="window.location.href='login.html'" title="Account">
+                <span class="material-symbols-outlined" style="font-size:18px;">person</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main" id="main">
+        <div class="no-data" id="noData">No results yet. <a href="index.html">Upload a file</a> to analyze.</div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        const raw = sessionStorage.getItem('scanResult')
+
+        if (!raw) {
+            document.getElementById('noData').style.display = 'block'
+        } else {
+            try {
+                const d = JSON.parse(raw)
+
+                if (!d || !d.label) {
+                    throw new Error('Invalid result data')
+                }
+
+                document.getElementById('noData').style.display = 'none'
+                renderResults(d)
+            } catch (parseErr) {
+                console.error('Failed to parse scan result:', parseErr)
+                document.getElementById('noData').innerHTML = 'Result data corrupted. <a href="index.html">Upload again</a>.'
+                document.getElementById('noData').style.display = 'block'
+                sessionStorage.removeItem('scanResult')
+            }
+        }
+
+        // ── active X-ray layer state ──
+        let activeLayer = 'original'
+        let overlayOpacity = 0.75
+
+        function renderResults(d) {
+            const isManip = d.label === 'MANIPULATED'
+            const isSusp = d.label === 'SUSPICIOUS'
+            const vc = isManip ? 'manipulated' : isSusp ? 'suspicious' : 'authentic'
+            const media = d.mediaType || 'image'
+            const xray = d.xray || {}
+            const ev = d.explanation?.engineVerdicts || {}
+
+            let html = ''
+
+            // ═══ VERDICT BANNER ═══
+            html += `
+            <div class="verdict-banner ${vc} animate-in">
+                <div>
+                    <div style="font-size:11px;color:#888;letter-spacing:2px;margin-bottom:4px;">DEEPFAKE VERDICT</div>
+                    <div class="verdict-label">${d.label}</div>
+                    <div class="verdict-sub">${media.toUpperCase()} Analysis &middot; ${d.confidence?.toFixed(1)}% confidence &middot; Score: ${d.score?.toFixed(1)}%</div>
+                </div>
+                <div class="verdict-meta">
+                    <div>${d.originalName || 'Unknown'}</div>
+                    <div>${d.timestamp ? new Date(d.timestamp * 1000).toLocaleString() : ''}</div>
+                    <div style="margin-top:4px;">Case: ${d.fileId?.slice(0,8) || '---'}</div>
+                </div>
+            </div>`
+
+            // ═══ FORENSIC X-RAY VIEWER (THE HERO FEATURE) ═══
+            if (media === 'image') {
+                var hasXray = xray.noiseMap || xray.freqMap || xray.probMap
+                var origSrc = d.filePath ? (BACKEND + '/' + d.filePath) : ''
+
+                html += '<div class="xray-section animate-in delay-1">'
+                html += '<div class="xray-header"><h3>'
+                html += '<svg width="18" height="18" fill="none" stroke="#8ab4f8" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 010 20M2 12h20M12 2c2.5 2.8 4 6.2 4 10s-1.5 7.2-4 10M12 2c-2.5 2.8-4 6.2-4 10s1.5 7.2 4 10"/></svg>'
+                html += ' Deepfake X-Ray Viewer <span class="xray-badge">INTERACTIVE</span></h3>'
+                html += '<div class="layer-btns">'
+                html += '<button class="layer-btn active" onclick="setLayer(\'original\',this)">Original</button>'
+                html += '<button class="layer-btn" onclick="setLayer(\'ela\',this)">ELA Heatmap</button>'
+                if (xray.noiseMap) html += '<button class="layer-btn" onclick="setLayer(\'noise\',this)">Noise Map</button>'
+                if (xray.freqMap) html += '<button class="layer-btn" onclick="setLayer(\'freq\',this)">Frequency Spectrum</button>'
+                if (xray.probMap) html += '<button class="layer-btn" onclick="setLayer(\'prob\',this)">Manipulation Probability</button>'
+                if (xray.regionGrid) html += '<button class="layer-btn" onclick="setLayer(\'regions\',this)">Region Analysis</button>'
+                html += '</div></div>'
+
+                html += '<div class="xray-viewer" id="xrayViewer">'
+                if (origSrc) html += '<img id="origImg" src="' + origSrc + '" alt="Original" onerror="this.style.display=\'none\'">'
+                if (d.heatmapBase64) html += '<img class="overlay-img" id="layerEla" src="data:image/png;base64,' + d.heatmapBase64 + '">'
+                if (xray.noiseMap) html += '<img class="overlay-img" id="layerNoise" src="data:image/png;base64,' + xray.noiseMap + '">'
+                if (xray.freqMap) html += '<img class="overlay-img" id="layerFreq" src="data:image/png;base64,' + xray.freqMap + '">'
+                if (xray.probMap) html += '<img class="overlay-img" id="layerProb" src="data:image/png;base64,' + xray.probMap + '">'
+                html += '<div class="region-overlay" id="regionOverlay"></div>'
+                html += '</div>'
+
+                html += '<div class="xray-controls">'
+                html += '<span>Overlay Opacity:</span>'
+                html += '<input type="range" min="0" max="100" value="75" oninput="setOpacity(this.value)">'
+                html += '<span id="opacityVal">75%</span>'
+                html += '<span style="margin-left:auto;color:#555;">Click layer buttons to switch deepfake view</span>'
+                html += '</div></div>'
+
+                if (xray.regionGrid) {
+                    setTimeout(function() { buildRegionGrid(xray.regionGrid) }, 100)
+                }
+            }
+
+            // ═══ 3-ENGINE CROSS-EXAMINATION ═══
+            if (media === 'image') {
+                var eng1Detail = 'No AI model available'
+                if (d.modelScore !== null && d.modelScore !== undefined) {
+                    eng1Detail = 'AI Model Score: ' + d.modelScore.toFixed(1) + '% · Models: ' + (d.modelsUsed ? d.modelsUsed.join(', ') : 'ensemble')
+                }
+                var eng2Detail = 'ELA: ' + d.elaAdvanced + '% · FFT: ' + d.freqScore + '% · Noise: ' + d.noiseScore + '% · Ghost: ' + d.ghostScore + '% · Gradient: ' + d.gradientScore + '%'
+                var eng3Detail = 'EXIF: ' + d.exifLabel + ' (' + d.exifScore + '%) · ' + (d.exifFlags ? d.exifFlags.join(', ') : 'no flags')
+
+                var engines = [
+                    { icon: '&#129504;', name: 'Engine 1: Neural Fingerprint', verdict: ev.neural || 'unknown', detail: eng1Detail },
+                    { icon: '&#9889;', name: 'Engine 2: Physics Validator', verdict: ev.physics || 'unknown', detail: eng2Detail },
+                    { icon: '&#128274;', name: 'Engine 3: Provenance Tracker', verdict: ev.provenance || 'unknown', detail: eng3Detail }
+                ]
+
+                html += '<div class="engines-section animate-in delay-2">'
+                engines.forEach(function(eng) {
+                    var vClass = eng.verdict === 'fake' ? 'verdict-fake'
+                        : eng.verdict === 'suspicious' ? 'verdict-suspicious'
+                        : eng.verdict === 'authentic' ? 'verdict-authentic' : ''
+                    html += '<div class="engine-card ' + vClass + '">'
+                    html += '<div class="engine-icon">' + eng.icon + '</div>'
+                    html += '<div class="engine-name">' + eng.name + '</div>'
+                    html += '<div class="engine-verdict ' + eng.verdict + '">' + eng.verdict.toUpperCase() + '</div>'
+                    html += '<div class="engine-detail">' + eng.detail + '</div>'
+                    html += '</div>'
+                })
+                html += '</div>'
+            }
+
+            // ═══ SCORE BREAKDOWN CARDS ═══
+            html += '<div class="scores-grid animate-in delay-3">'
+
+            html += scoreCard('Manipulation Score', d.score, scoreCls(d.score), '0-40 Authentic / 40-65 Suspicious / 65+ Manipulated')
+
+            if (media === 'image') {
+                if (d.modelScore != null) html += scoreCard('AI Model', d.modelScore, 'blue', 'Neural network ensemble')
+                if (d.freqScore != null) html += scoreCard('FFT Frequency', d.freqScore, scoreCls(d.freqScore), 'Spectral domain analysis')
+                if (d.noiseScore != null) html += scoreCard('Noise Consistency', d.noiseScore, scoreCls(d.noiseScore), 'Photon noise patterns')
+                if (d.elaAdvanced != null) html += scoreCard('ELA Advanced', d.elaAdvanced, scoreCls(d.elaAdvanced), 'Multi-quality error levels')
+                if (d.ghostScore != null) html += scoreCard('JPEG Ghost', d.ghostScore, scoreCls(d.ghostScore), 'Compression history')
+                if (d.gradientScore != null) html += scoreCard('Gradient', d.gradientScore, scoreCls(d.gradientScore), 'Edge consistency')
+                if (d.pixelScore != null) html += scoreCard('Pixel Statistics', d.pixelScore, scoreCls(d.pixelScore), 'Distribution analysis')
+            }
+
+            if (media === 'video') {
+                var flagR = d.framesChecked ? ((d.framesFlagged / d.framesChecked) * 100) : 0
+                html += scoreCard('Frames Flagged', flagR, scoreCls(flagR), d.framesFlagged + '/' + d.framesChecked + ' of ' + d.totalFrames + ' total')
+            }
+
+            if (media === 'audio') {
+                if (d.modelScore != null) html += scoreCard('Audio Model', d.modelScore, scoreCls(d.modelScore), d.modelUsed || 'deepfake audio model')
+                if (d.spectralScore != null) html += scoreCard('Spectral', d.spectralScore, scoreCls(d.spectralScore), 'Frequency pattern analysis')
+            }
+
+            html += '</div>'
+
+            // ═══ EXPLANATION ═══
+            if (d.explanation) {
+                html += `
+                <div class="detail-card animate-in delay-4">
+                    <h3>Cross-Examination Analysis</h3>
+                    <div class="conclusion-text">${d.explanation.conclusion || ''}</div>`
+
+                if (d.explanation.reasons) {
+                    d.explanation.reasons.forEach(r => {
+                        // parse score from reason to color the dot
+                        const match = r.match(/\((\d+)%?\)/)
+                        const val = match ? parseInt(match[1]) : 0
+                        const dotCls = val > 50 ? 'high' : val > 25 ? 'med' : 'low'
+                        html += `<div class="reason-line"><div class="reason-dot ${dotCls}"></div>${r}</div>`
+                    })
+                }
+
+                if (d.explanation.agreementNote) {
+                    html += `<div style="font-size:11px;color:#555;margin-top:10px;padding-top:8px;border-top:1px solid #1a1a1a;">${d.explanation.agreementNote}</div>`
+                }
+                html += `</div>`
+            }
+
+            // ═══ FORENSIC CHAIN OF CUSTODY ═══
+            html += `
+            <div class="detail-card">
+                <h3>Chain of Custody</h3>
+                <div class="hash-row"><span class="hash-label">SHA-256 File Hash</span><span class="hash-val">${d.fileHash || '---'}</span></div>
+                <div class="hash-row"><span class="hash-label">Chain Hash</span><span class="hash-val">${d.chainHash || '---'}</span></div>
+                <div class="hash-row"><span class="hash-label">Media Type</span><span class="hash-val">${media.toUpperCase()}</span></div>
+                <div class="hash-row"><span class="hash-label">Analysis Timestamp</span><span class="hash-val">${d.timestamp ? new Date(d.timestamp * 1000).toISOString() : '---'}</span></div>
+                <div class="hash-row"><span class="hash-label">IT Act 65B Status</span><span class="hash-val" style="color:#f59e0b;">Auto-generated — requires expert certification for legal use</span></div>
+            </div>`
+
+            // ═══ ACTIONS ═══
+            html += `
+            <div class="actions">
+                <button class="btn btn-success" onclick="downloadReport()" id="reportBtn">Download PDF Report</button>
+                <button class="btn btn-primary" onclick="window.location.href='index.html'">Analyze Another</button>
+                <button class="btn btn-outline" onclick="copyResult(event)">Copy JSON</button>
+            </div>
+            <div id="reportStatus" style="font-size:12px;color:#666;margin-top:8px;"></div>
+            <div class="summary-box" id="summaryBox" style="display:none"></div>`
+
+            document.getElementById('main').innerHTML = html
+
+            // animate score bars after render
+            setTimeout(() => {
+                document.querySelectorAll('.score-bar-fill').forEach(b => {
+                    const w = b.style.width; b.style.width = '0%'
+                    setTimeout(() => b.style.width = w, 80)
+                })
+            }, 200)
+        }
+
+        // ── helper: score card HTML ──
+        function scoreCard(label, val, cls, sub) {
+            const v = val != null ? val.toFixed(1) : '—'
+            const c = cls === 'red' ? '#ef4444' : cls === 'orange' ? '#f59e0b' : cls === 'blue' ? '#3b82f6' : '#22c55e'
+            return `
+            <div class="score-card">
+                <h4>${label}</h4>
+                <div class="score-val" style="color:${c}">${v}%</div>
+                <div class="score-bar"><div class="score-bar-fill ${cls}" style="width:${val||0}%"></div></div>
+                <div class="score-sub">${sub}</div>
+            </div>`
+        }
+
+        function scoreCls(v) { return v > 50 ? 'red' : v > 25 ? 'orange' : 'green' }
+
+        // ═══ FORENSIC X-RAY LAYER CONTROLS ═══
+        function setLayer(layer, btn) {
+            activeLayer = layer
+            // update button styles
+            document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'))
+            if (btn) btn.classList.add('active')
+
+            // hide all overlays
+            document.querySelectorAll('.overlay-img').forEach(el => el.classList.remove('visible'))
+            const regionOverlay = document.getElementById('regionOverlay')
+            if (regionOverlay) regionOverlay.classList.remove('visible')
+
+            const origImg = document.getElementById('origImg')
+
+            if (layer === 'original') {
+                if (origImg) origImg.style.opacity = '1'
+            } else if (layer === 'ela') {
+                if (origImg) origImg.style.opacity = '0.3'
+                const el = document.getElementById('layerEla')
+                if (el) { el.classList.add('visible'); el.style.opacity = overlayOpacity }
+            } else if (layer === 'noise') {
+                if (origImg) origImg.style.opacity = '0.3'
+                const el = document.getElementById('layerNoise')
+                if (el) { el.classList.add('visible'); el.style.opacity = overlayOpacity }
+            } else if (layer === 'freq') {
+                if (origImg) origImg.style.opacity = '0'
+                const el = document.getElementById('layerFreq')
+                if (el) { el.classList.add('visible'); el.style.opacity = '1' }
+            } else if (layer === 'prob') {
+                if (origImg) origImg.style.opacity = '1'
+                const el = document.getElementById('layerProb')
+                if (el) { el.classList.add('visible'); el.style.opacity = overlayOpacity }
+            } else if (layer === 'regions') {
+                if (origImg) origImg.style.opacity = '0.7'
+                if (regionOverlay) regionOverlay.classList.add('visible')
+            }
+        }
+
+        function setOpacity(val) {
+            overlayOpacity = val / 100
+            document.getElementById('opacityVal').textContent = val + '%'
+            // reapply to active overlay
+            if (activeLayer !== 'original' && activeLayer !== 'freq' && activeLayer !== 'regions') {
+                const layerMap = { ela: 'layerEla', noise: 'layerNoise', prob: 'layerProb' }
+                const el = document.getElementById(layerMap[activeLayer])
+                if (el) el.style.opacity = overlayOpacity
+            }
+        }
+
+        // ── build interactive region grid ──
+        function buildRegionGrid(grid) {
+            const overlay = document.getElementById('regionOverlay')
+            if (!overlay || !grid) return
+
+            const rows = grid.length
+            const cols = grid[0].length
+            overlay.style.gridTemplateRows = `repeat(${rows}, 1fr)`
+            overlay.style.gridTemplateColumns = `repeat(${cols}, 1fr)`
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const score = grid[r][c]
+                    const cell = document.createElement('div')
+                    cell.className = 'region-cell'
+
+                    // color by score
+                    const red = Math.round(score * 2.55)
+                    const green = Math.round((100 - score) * 2.55)
+                    cell.style.background = `rgba(${red}, ${green}, 30, 0.25)`
+
+                    cell.innerHTML = `<div class="region-tooltip">Region [${r},${c}]: ${score.toFixed(1)}% suspicious</div>`
+                    overlay.appendChild(cell)
+                }
+            }
+        }
+
+        // ═══ REPORT DOWNLOAD ═══
+        async function downloadReport() {
+            const d = JSON.parse(sessionStorage.getItem('scanResult'))
+            const btn = document.getElementById('reportBtn')
+            const status = document.getElementById('reportStatus')
+            btn.disabled = true
+            btn.textContent = 'Generating report...'
+            status.textContent = 'Calling LLM for deepfake summary...'
+
+            try {
+                const res = await fetch(`${API}/report`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...d, fileId: d.fileId })
+                })
+                if (!res.ok) throw new Error('Report generation failed')
+                const rep = await res.json()
+
+                if (rep.llmSummary) {
+                    const box = document.getElementById('summaryBox')
+                    box.style.display = 'block'
+                    box.textContent = rep.llmSummary
+                }
+
+                if (rep.reportBase64) {
+                    const link = document.createElement('a')
+                    link.href = 'data:application/pdf;base64,' + rep.reportBase64
+                    link.download = `DeepfakeAI-${rep.caseReference}.pdf`
+                    link.click()
+                    status.textContent = `Report saved: ${rep.caseReference}`
+                } else if (rep.pdfUrl) {
+                    window.open(rep.pdfUrl, '_blank')
+                    status.textContent = `Report: ${rep.caseReference}`
+                }
+
+                btn.textContent = 'Download PDF Report'
+                btn.disabled = false
+            } catch(e) {
+                status.textContent = 'Error: ' + e.message
+                btn.textContent = 'Download PDF Report'
+                btn.disabled = false
+            }
+        }
+
+        function copyResult(e) {
+            const d = sessionStorage.getItem('scanResult')
+            navigator.clipboard.writeText(d).then(function() {
+                var btn = e ? e.target : document.querySelector('.btn-outline')
+                btn.textContent = 'Copied!'
+                setTimeout(function() { btn.textContent = 'Copy JSON' }, 1500)
+            })
+        }
+    </script>
+</body>
+</html>
