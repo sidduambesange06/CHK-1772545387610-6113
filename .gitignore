@@ -1,0 +1,8 @@
+node_modules/
+api/uploads/
+api/config/serviceAccountKey.json
+api/.env
+ml-service/temp/
+__pycache__/
+*.pyc
+.env

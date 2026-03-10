@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pillow
+numpy
+reportlab
+requests
+python-multipart
+piexif
+transformers
+torch
+opencv-python-headless
+librosa
+torchaudio
