@@ -4,6 +4,7 @@ node_modules/
 # environment variables
 .env
 api/.env
+api/.env.example
 
 # uploads
 api/uploads/
@@ -26,3 +27,19 @@ ml-service/temp/
 .DS_Store
 .claude/
 Thumbs.db
+
+# test images / data
+*.jpeg
+*.png
+!frontend/**/*.png
+
+# root-level package files (only api/ has its own)
+/package.json
+/package-lock.json
+
+# old duplicate folder
+web-deepfakeAI/
+
+# misc
+firebase-config-for-frontend.js
+/setup-supabase.js
