@@ -4,33 +4,36 @@ const cors = require('cors')
 const axios = require('axios')
 const path = require('path')
 const firebase = require('./config/firebase')
+const supabase = require('./config/supabase')
 
 const app = express()
 
-app.use(cors())
+app.use(cors({ origin: true, credentials: true }))
 app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ extended: true }))
 
 // serve uploaded files statically so frontend can preview them
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
+// init both services
 firebase.init()
+supabase.init()
 
 app.use('/api', require('./routes/upload'))
 app.use('/api', require('./routes/analyze'))
 app.use('/api', require('./routes/report'))
 app.use('/api', require('./routes/auth'))
 
-// check if python service is up
+// health check - shows status of all services
 app.get('/api/health', async (req, res) => {
   let mlStatus = 'down'
   let mlDetails = {}
 
   try {
-    const r = await axios.get(`${process.env.ML_SERVICE_URL}/health`, { timeout: 3000 })
+    const r = await axios.get(`${process.env.ML_SERVICE_URL}/health`, { timeout: 6000 })
     mlStatus = 'up'
     mlDetails = r.data
-  } catch(e) {
+  } catch (e) {
     mlStatus = 'down'
   }
 
@@ -39,9 +42,18 @@ app.get('/api/health', async (req, res) => {
     ml: mlStatus === 'up',
     mlDetails,
     firebase: firebase.isReady(),
+    supabase: supabase.isReady(),
     time: new Date().toISOString(),
-    version: '1.0.0'
+    version: '2.0.0'
   })
+})
+
+// serve frontend in production (single deploy — no separate static server needed)
+const frontendPath = path.join(__dirname, '..', 'frontend')
+app.use(express.static(frontendPath))
+// SPA fallback: any non-api route serves index.html
+app.get(/^\/(?!api|uploads).*/, (req, res) => {
+  res.sendFile(path.join(frontendPath, 'index.html'))
 })
 
 // catch unhandled errors so server doesnt crash
@@ -54,4 +66,6 @@ const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
   console.log(`[server] running on port ${PORT}`)
   console.log(`[server] ml service -> ${process.env.ML_SERVICE_URL}`)
+  console.log(`[server] firebase: ${firebase.isReady() ? 'connected' : 'offline'}`)
+  console.log(`[server] supabase: ${supabase.isReady() ? 'connected' : 'offline'}`)
 })

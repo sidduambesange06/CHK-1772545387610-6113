@@ -2,8 +2,9 @@ const express = require('express')
 const multer = require('multer')
 const path = require('path')
 const fs = require('fs')
+const crypto = require('crypto')
 const { v4: uuidv4 } = require('uuid')
-const firebase = require('../config/firebase')
+const db = require('../config/database')
 
 const router = express.Router()
 
@@ -23,7 +24,6 @@ const upload = multer({
   storage,
   limits: { fileSize: 50 * 1024 * 1024 }, // 50mb
   fileFilter: (req, file, cb) => {
-    // allow images, video, audio
     const allowed = /jpeg|jpg|png|gif|webp|mp4|avi|mov|mkv|mp3|wav|ogg|flac/
     const ext = path.extname(file.originalname).toLowerCase().slice(1)
     if (allowed.test(ext)) {
@@ -39,30 +39,35 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
   const fileId = uuidv4()
   const { filename } = req.file
-  // return normalized path with forward slashes so it works cross platform
   const filePath = `uploads/${filename}`
 
-  // save to firebase if its connected
-  if (firebase.isReady()) {
-    try {
-      const db = firebase.getDb()
-      await db.collection('cases').doc(fileId).set({
-        uid: req.body.uid || 'anonymous',
-        fileId,
-        filename,
-        filePath,
-        uploadedAt: new Date().toISOString(),
-        status: 'uploaded',
-        originalName: req.file.originalname,
-        size: req.file.size,
-        mimetype: req.file.mimetype
-      })
-      console.log('[firebase] case created:', fileId)
-    } catch(e) {
-      console.log('[firebase] save failed:', e.message)
-      // dont crash - firebase is optional
+  // compute SHA-256 hash of the file for evidence chain
+  const fileBuffer = fs.readFileSync(req.file.path)
+  const fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex')
+
+  // save case to Supabase (persistent storage)
+  await db.createCase({
+    fileId,
+    uid: req.body.uid || 'anonymous',
+    filename,
+    originalName: req.file.originalname,
+    filePath,
+    size: req.file.size,
+    mimetype: req.file.mimetype
+  })
+
+  // add evidence chain entry (tamper-proof audit trail)
+  await db.addEvidenceEntry({
+    caseId: fileId,
+    action: 'file_uploaded',
+    actor: req.body.uid || 'anonymous',
+    fileHash,
+    metadata: {
+      originalName: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype
     }
-  }
+  })
 
   res.json({
     fileId,
@@ -70,6 +75,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     path: filePath,
     originalName: req.file.originalname,
     size: req.file.size,
+    fileHash,
     status: 'uploaded'
   })
 })
