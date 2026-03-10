@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Deepfake AI Home</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#1e3b8a",
+            "background-light": "#f6f6f8",
+            "background-dark": "#0f172a",
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"],
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px",
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: 400;
+      font-style: normal;
+      font-size: 24px;
+      display: inline-flex;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Scroll Animation Styles - More Visible */
+    .scroll-fade {
+      opacity: 0;
+      transform: translateY(80px);
+      transition: opacity 1s ease-out, transform 1s ease-out;
+    }
+    .scroll-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    .scroll-fade-left {
+      opacity: 0;
+      transform: translateX(-100px);
+      transition: opacity 1.2s ease-out, transform 1.2s ease-out;
+    }
+    .scroll-fade-left.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    
+    .scroll-fade-right {
+      opacity: 0;
+      transform: translateX(100px);
+      transition: opacity 1.2s ease-out, transform 1.2s ease-out;
+    }
+    .scroll-fade-right.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    
+    .scroll-scale {
+      opacity: 0;
+      transform: scale(0.7) rotate(-5deg);
+      transition: opacity 1s ease-out, transform 1s ease-out;
+    }
+    .scroll-scale.visible {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+    
+    /* Stagger delays for grid items */
+    .scroll-fade:nth-child(1) { transition-delay: 0s; }
+    .scroll-fade:nth-child(2) { transition-delay: 0.15s; }
+    .scroll-fade:nth-child(3) { transition-delay: 0.3s; }
+    .scroll-fade:nth-child(4) { transition-delay: 0.45s; }
+    
+    .scroll-scale:nth-child(1) { transition-delay: 0s; }
+    .scroll-scale:nth-child(2) { transition-delay: 0.15s; }
+    .scroll-scale:nth-child(3) { transition-delay: 0.3s; }
+    .scroll-scale:nth-child(4) { transition-delay: 0.45s; }
+    
+    /* Parallax container */
+    .parallax-container {
+      position: relative;
+      overflow: visible;
+    }
+    .parallax-layer {
+      will-change: transform;
+    }
+    
+    /* Smooth scroll */
+    html {
+      scroll-behavior: smooth;
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+  <div class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden">
+    <div class="layout-container flex h-full grow flex-col">
+      <!-- HEADER -->
+      <header class="border-b border-solid border-slate-200 dark:border-slate-800 px-3 py-2 sm:px-4 sm:py-3 lg:px-20 lg:py-4">
+        <div class="flex flex-col lg:flex-row lg:items-center gap-2 sm:gap-3 lg:gap-4">
+          <!-- Top Row: Logo and Actions -->
+          <div class="flex items-center justify-between w-full lg:w-auto">
+            <a href="index.html" class="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity cursor-pointer">
+              <span class="material-symbols-outlined text-xl sm:text-2xl lg:text-3xl font-bold">fingerprint</span>
+              <h2 class="text-slate-900 dark:text-white text-sm sm:text-base lg:text-xl font-black leading-tight tracking-tight">Deepfake AI</h2>
+            </a>
+            <!-- Mobile Actions -->
+            <div class="flex lg:hidden gap-1.5 items-center">
+              <div class="relative">
+                <button onclick="toggleSettingsMenu()" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                  <span class="material-symbols-outlined text-slate-600 dark:text-slate-400 text-lg">settings</span>
+                </button>
+              </div>
+              <button onclick="alert('Profile menu - Coming soon')" class="bg-primary/20 flex items-center justify-center rounded-full size-7 border border-primary/30">
+                <span class="material-symbols-outlined text-primary text-base">person</span>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Navigation -->
+          <nav class="flex items-center gap-3 sm:gap-4 lg:gap-8 overflow-x-auto pb-1 lg:pb-0 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:mx-0 lg:px-0 scrollbar-hide">
+            <a class="text-primary text-xs sm:text-sm font-semibold whitespace-nowrap" href="index.html">Dashboard</a>
+            <a class="text-slate-600 dark:text-slate-400 hover:text-primary text-xs sm:text-sm font-medium whitespace-nowrap transition-colors" href="evidence.html">Evidence</a>
+            <a class="text-slate-600 dark:text-slate-400 hover:text-primary text-xs sm:text-sm font-medium whitespace-nowrap transition-colors" href="dashboard.html">Analysis</a>
+            <a class="text-slate-600 dark:text-slate-400 hover:text-primary text-xs sm:text-sm font-medium whitespace-nowrap transition-colors" href="reports.html">Reports</a>
+            <a class="text-slate-600 dark:text-slate-400 hover:text-primary text-xs sm:text-sm font-medium whitespace-nowrap transition-colors" href="settings.html">Settings</a>
+          </nav>
+          
+          <!-- Desktop Actions -->
+          <div class="hidden lg:flex flex-1 justify-end gap-3 items-center">
+            <button class="flex items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-all whitespace-nowrap">
+              Upgrade Node
+            </button>
+            <div class="relative">
+              <button onclick="toggleSettingsMenu()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <span class="material-symbols-outlined text-slate-600 dark:text-slate-400 hover:text-primary">settings</span>
+              </button>
+              <!-- Settings Dropdown -->
+              <div id="settingsDropdown" class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-50">
+                <div class="py-2">
+                  <a href="settings.html" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <span class="material-symbols-outlined text-slate-600 dark:text-slate-400">tune</span>
+                    <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">Settings</span>
+                  </a>
+                  <a href="#" onclick="alert('Profile - Coming soon')" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <span class="material-symbols-outlined text-slate-600 dark:text-slate-400">person</span>
+                    <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">Profile</span>
+                  </a>
+                  <a href="#" onclick="alert('Help & Support')" class="flex items-center gap-3 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <span class="material-symbols-outlined text-slate-600 dark:text-slate-400">help</span>
+                    <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">Help & Support</span>
+                  </a>
+                  <div class="border-t border-slate-200 dark:border-slate-800 my-2"></div>
+                  <a href="login.html" onclick="handleLogout(event)" class="flex items-center gap-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                    <span class="material-symbols-outlined text-red-600">logout</span>
+                    <span class="text-sm font-semibold text-red-600">Log Out</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+            <button onclick="alert('Profile menu - Coming soon')" class="bg-primary/20 flex items-center justify-center rounded-full size-10 border border-primary/30 hover:bg-primary/30 transition-colors">
+              <span class="material-symbols-outlined text-primary">person</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 flex flex-col items-center">
+        <div class="max-w-[1200px] w-full px-6 lg:px-10">
+          <!-- HERO SECTION -->
+          <section class="py-12 lg:py-20 flex flex-col lg:flex-row gap-12 items-center parallax-container">
+            <div class="flex flex-col gap-8 flex-1 scroll-fade-left">
+              <div class="flex flex-col gap-4">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 w-fit">
+                  <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </span>
+                  <span class="text-xs font-bold text-primary tracking-wider uppercase">AI Detection Active</span>
+                </div>
+                <h1 class="text-slate-900 dark:text-white text-5xl lg:text-7xl font-black leading-[1.1] tracking-tighter">
+                  DEEPFAKE <span class="text-primary">DETECTION</span>
+                </h1>
+                <p class="text-slate-600 dark:text-slate-400 text-lg lg:text-xl max-w-2xl leading-relaxed">
+                  <strong class="text-slate-900 dark:text-white font-semibold">Real-time AI Analysis.</strong> Detect manipulated media with 85% accuracy using advanced neural networks trained on millions of deepfake samples.
+                </p>
+              </div>
+              <div class="flex flex-wrap gap-4">
+                <button onclick="window.location.href='dashboard.html'" class="flex min-w-[180px] items-center justify-center gap-2 rounded-xl h-14 px-8 bg-primary text-white text-base font-bold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/25">
+                  <span class="material-symbols-outlined">play_arrow</span>
+                  <span>Analyze Media</span>
+                </button>
+              </div>
+            </div>
+            <div class="flex-1 w-full max-w-xl scroll-fade-right">
+              <div id="threejs-container" class="aspect-video bg-gradient-to-br from-primary/20 to-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 relative overflow-hidden group shadow-2xl parallax-layer" data-alt="Abstract digital neural network visualization hero image">
+                <!-- Three.js canvas will be inserted here -->
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent pointer-events-none z-10"></div>
+                <div class="absolute bottom-4 left-4 right-4 p-4 bg-white/10 dark:bg-black/40 backdrop-blur-md rounded-lg border border-white/10 z-20">
+                  <div class="flex justify-between items-center text-xs font-mono text-slate-300">
+                    <span>ENCRYPTION: AES-256</span>
+                    <span id="latency-display">LATENCY: 14ms</span>
+                  </div>
+                  <div class="w-full bg-slate-700/50 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div id="progress-bar" class="bg-primary h-full w-2/3 transition-all duration-300"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- FORENSIC TOOLS SECTION -->
+          <section class="pb-16 scroll-fade">
+            <div class="flex items-end justify-between mb-8 scroll-fade">
+              <div>
+                <h2 class="text-slate-900 dark:text-white text-2xl font-bold leading-tight tracking-tight">Forensic Analysis Tools</h2>
+                <p class="text-slate-500 text-sm mt-1">Specialized detection suites for multi-modal evidence</p>
+              </div>
+              <a class="text-primary text-sm font-bold flex items-center gap-1 hover:underline" href="#">
+                Explore All <span class="material-symbols-outlined text-sm">arrow_forward</span>
+              </a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <!-- Card 1: Deepfake Detection -->
+              <div class="group flex flex-col gap-4 p-5 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 hover:border-primary/50 transition-all shadow-sm scroll-fade">
+                <div class="w-full aspect-square bg-gradient-to-br from-red-500/20 to-purple-500/20 rounded-xl overflow-hidden relative" data-alt="Deepfake video analysis scan interface">
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <svg class="w-32 h-32 text-primary group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18" stroke="#EF4444"/>
+                    </svg>
+                  </div>
+                  <div class="absolute top-2 right-2 px-2 py-1 bg-red-500/90 backdrop-blur-sm rounded text-white text-xs font-bold">
+                    VIDEO
+                  </div>
+                </div>
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <p class="text-slate-900 dark:text-white text-lg font-bold leading-normal">Deepfake Detection</p>
+                    <span class="material-symbols-outlined text-primary text-xl">verified</span>
+                  </div>
+                  <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">High-fidelity analysis for video manipulation, frame consistency, and synthetic artifacts.</p>
+                </div>
+              </div>
+
+              <!-- Card 2: Document Tampering -->
+              <div class="group flex flex-col gap-4 p-5 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 hover:border-primary/50 transition-all shadow-sm scroll-fade">
+                <div class="w-full aspect-square bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-xl overflow-hidden relative" data-alt="Microscopic document pixel analysis view">
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <svg class="w-32 h-32 text-primary group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                      <circle cx="16" cy="16" r="3" stroke="#EF4444" stroke-width="2" fill="none"/>
+                      <line x1="18" y1="18" x2="20" y2="20" stroke="#EF4444" stroke-width="2"/>
+                    </svg>
+                  </div>
+                  <div class="absolute top-2 right-2 px-2 py-1 bg-blue-500/90 backdrop-blur-sm rounded text-white text-xs font-bold">
+                    DOCUMENT
+                  </div>
+                </div>
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <p class="text-slate-900 dark:text-white text-lg font-bold leading-normal">Document Tampering</p>
+                    <span class="material-symbols-outlined text-primary text-xl">edit_document</span>
+                  </div>
+                  <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Examine metadata trails, pixel compression inconsistencies, and clone-stamp artifacts.</p>
+                </div>
+              </div>
+
+              <!-- Card 3: Voice Clone -->
+              <div class="group flex flex-col gap-4 p-5 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 hover:border-primary/50 transition-all shadow-sm scroll-fade">
+                <div class="w-full aspect-square bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-xl overflow-hidden relative" data-alt="Sound wave frequency forensic visualization">
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <svg class="w-32 h-32 text-primary group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h2M19 12h2M6 8l1 1M17 8l1 1M6 16l1-1M17 16l1-1" stroke="#10B981"/>
+                    </svg>
+                  </div>
+                  <div class="absolute top-2 right-2 px-2 py-1 bg-emerald-500/90 backdrop-blur-sm rounded text-white text-xs font-bold">
+                    AUDIO
+                  </div>
+                </div>
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <p class="text-slate-900 dark:text-white text-lg font-bold leading-normal">Voice Clone</p>
+                    <span class="material-symbols-outlined text-primary text-xl">settings_voice</span>
+                  </div>
+                  <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Biometric vocal fingerprinting to identify AI-generated synthetic speech and cloning.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- STATS SECTION -->
+          <section class="pb-20 scroll-fade">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="flex flex-col gap-2 rounded-2xl p-6 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm scroll-scale">
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Analyses Run</p>
+                <div class="flex items-baseline gap-2">
+                  <p class="text-slate-900 dark:text-white text-3xl font-black">12.4k</p>
+                  <p class="text-emerald-500 text-sm font-bold flex items-center">
+                    <span class="material-symbols-outlined text-sm">trending_up</span> 12%
+                  </p>
+                </div>
+              </div>
+              <div class="flex flex-col gap-2 rounded-2xl p-6 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm scroll-scale">
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Detection Accuracy</p>
+                <div class="flex items-baseline gap-2">
+                  <p class="text-slate-900 dark:text-white text-3xl font-black">99.9%</p>
+                  <p class="text-emerald-500 text-sm font-bold flex items-center">
+                    <span class="material-symbols-outlined text-sm">trending_up</span> 0.2%
+                  </p>
+                </div>
+              </div>
+              <div class="flex flex-col gap-2 rounded-2xl p-6 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm scroll-scale">
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Evidence Verified</p>
+                <div class="flex items-baseline gap-2">
+                  <p class="text-slate-900 dark:text-white text-3xl font-black">450GB</p>
+                  <p class="text-emerald-500 text-sm font-bold flex items-center">
+                    <span class="material-symbols-outlined text-sm">trending_up</span> 5%
+                  </p>
+                </div>
+              </div>
+              <div class="flex flex-col gap-2 rounded-2xl p-6 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm scroll-scale">
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Avg Processing</p>
+                <div class="flex items-baseline gap-2">
+                  <p class="text-slate-900 dark:text-white text-3xl font-black">&lt; 30s</p>
+                  <p class="text-emerald-500 text-sm font-bold flex items-center">
+                    <span class="material-symbols-outlined text-sm">trending_up</span> 15%
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- NEW: FEATURES SECTION -->
+          <section class="pb-20 scroll-fade">
+            <div class="text-center mb-12 scroll-fade">
+              <h2 class="text-slate-900 dark:text-white text-4xl font-black mb-4">Why Choose AI Forensics?</h2>
+              <p class="text-slate-500 text-lg max-w-2xl mx-auto">Industry-leading technology trusted by forensic experts worldwide</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div class="scroll-fade p-8 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-slate-200 dark:border-slate-800">
+                <div class="w-16 h-16 rounded-xl bg-primary/20 flex items-center justify-center mb-6">
+                  <span class="material-symbols-outlined text-primary text-4xl">speed</span>
+                </div>
+                <h3 class="text-slate-900 dark:text-white text-xl font-bold mb-3">Lightning Fast</h3>
+                <p class="text-slate-500 leading-relaxed">Process evidence in under 30 seconds with our optimized AI models and distributed computing infrastructure.</p>
+              </div>
+              
+              <div class="scroll-fade p-8 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-slate-200 dark:border-slate-800">
+                <div class="w-16 h-16 rounded-xl bg-emerald-500/20 flex items-center justify-center mb-6">
+                  <span class="material-symbols-outlined text-emerald-500 text-4xl">verified_user</span>
+                </div>
+                <h3 class="text-slate-900 dark:text-white text-xl font-bold mb-3">99.9% Accuracy</h3>
+                <p class="text-slate-500 leading-relaxed">State-of-the-art deep learning models trained on millions of samples for unmatched detection accuracy.</p>
+              </div>
+              
+              <div class="scroll-fade p-8 rounded-2xl bg-gradient-to-br from-amber-500/10 to-transparent border border-slate-200 dark:border-slate-800">
+                <div class="w-16 h-16 rounded-xl bg-amber-500/20 flex items-center justify-center mb-6">
+                  <span class="material-symbols-outlined text-amber-500 text-4xl">security</span>
+                </div>
+                <h3 class="text-slate-900 dark:text-white text-xl font-bold mb-3">Bank-Grade Security</h3>
+                <p class="text-slate-500 leading-relaxed">AES-256 encryption, zero-knowledge architecture, and compliance with international security standards.</p>
+              </div>
+            </div>
+
+            <!-- Single CTA Button -->
+            <div class="text-center mt-12 scroll-fade">
+              <button onclick="window.location.href='dashboard.html'" class="px-10 py-5 bg-primary text-white rounded-xl font-bold text-lg hover:scale-105 transition-transform shadow-2xl shadow-primary/30 hover:shadow-primary/50">
+                Start Free Trial
+              </button>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <!-- FOOTER -->
+      <footer class="border-t border-slate-200 dark:border-slate-800 py-10 px-6 lg:px-20 bg-white dark:bg-slate-950">
+        <div class="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+          <div class="flex items-center gap-3 text-slate-400">
+            <span class="material-symbols-outlined">fingerprint</span>
+            <span class="text-sm font-bold tracking-tight">AI FORENSICS ENGINE v2.4.0</span>
+          </div>
+          <div class="flex gap-8">
+            <a class="text-xs font-medium text-slate-500 hover:text-primary" href="#">Legal Compliance</a>
+            <a class="text-xs font-medium text-slate-500 hover:text-primary" href="#">Data Protection</a>
+            <a class="text-xs font-medium text-slate-500 hover:text-primary" href="#">API Documentation</a>
+          </div>
+          <p class="text-xs text-slate-600">© 2024 AI Forensics Lab. Secure Evidence Verification.</p>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Sandbox Modal -->
+  <div id="sandboxModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden animate-scale-in">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-primary/10 to-transparent">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+            <span class="material-symbols-outlined text-primary text-2xl">science</span>
+          </div>
+          <div>
+            <h3 class="text-2xl font-black text-slate-900 dark:text-white">AI Forensics Sandbox</h3>
+            <p class="text-xs text-slate-500">Test and experiment with forensic analysis tools</p>
+          </div>
+        </div>
+        <button onclick="closeSandbox()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+          <span class="material-symbols-outlined text-2xl">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Content -->
+      <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        <!-- Sandbox Tools Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <!-- Tool 1: Image Analysis -->
+          <div class="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 hover:border-primary/50 transition-all cursor-pointer group">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <span class="material-symbols-outlined text-primary text-2xl">image</span>
+              </div>
+              <div class="flex-1">
+                <h4 class="text-lg font-bold text-slate-900 dark:text-white mb-1">Image Analysis</h4>
+                <p class="text-xs text-slate-500 mb-3">Test deepfake detection and image manipulation analysis</p>
+                <button onclick="alert('Image Analysis Sandbox - Upload test images to analyze for manipulation, deepfakes, and metadata inconsistencies.')" class="text-xs font-bold text-primary hover:underline">Launch Tool →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tool 2: Video Forensics -->
+          <div class="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 hover:border-primary/50 transition-all cursor-pointer group">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <span class="material-symbols-outlined text-primary text-2xl">videocam</span>
+              </div>
+              <div class="flex-1">
+                <h4 class="text-lg font-bold text-slate-900 dark:text-white mb-1">Video Forensics</h4>
+                <p class="text-xs text-slate-500 mb-3">Analyze video files for frame manipulation and synthetic content</p>
+                <button onclick="alert('Video Forensics Sandbox - Test video analysis for deepfakes, frame consistency, and temporal artifacts.')" class="text-xs font-bold text-primary hover:underline">Launch Tool →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tool 3: Audio Analysis -->
+          <div class="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 hover:border-primary/50 transition-all cursor-pointer group">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <span class="material-symbols-outlined text-primary text-2xl">mic</span>
+              </div>
+              <div class="flex-1">
+                <h4 class="text-lg font-bold text-slate-900 dark:text-white mb-1">Audio Analysis</h4>
+                <p class="text-xs text-slate-500 mb-3">Voice clone detection and audio authenticity verification</p>
+                <button onclick="alert('Audio Analysis Sandbox - Test voice clone detection and audio manipulation analysis.')" class="text-xs font-bold text-primary hover:underline">Launch Tool →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tool 4: Document Verification -->
+          <div class="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 hover:border-primary/50 transition-all cursor-pointer group">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <span class="material-symbols-outlined text-primary text-2xl">description</span>
+              </div>
+              <div class="flex-1">
+                <h4 class="text-lg font-bold text-slate-900 dark:text-white mb-1">Document Verification</h4>
+                <p class="text-xs text-slate-500 mb-3">Check documents for tampering and metadata analysis</p>
+                <button onclick="alert('Document Verification Sandbox - Test document analysis for tampering, clone stamps, and metadata inconsistencies.')" class="text-xs font-bold text-primary hover:underline">Launch Tool →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sandbox Features -->
+        <div class="bg-gradient-to-br from-primary/5 to-transparent rounded-xl p-6 border border-primary/20">
+          <h4 class="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">info</span>
+            Sandbox Features
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="flex items-start gap-3">
+              <span class="material-symbols-outlined text-primary text-xl">check_circle</span>
+              <div>
+                <p class="text-sm font-bold text-slate-900 dark:text-white">Safe Testing Environment</p>
+                <p class="text-xs text-slate-500">Test without affecting production data</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="material-symbols-outlined text-primary text-xl">speed</span>
+              <div>
+                <p class="text-sm font-bold text-slate-900 dark:text-white">Real-Time Analysis</p>
+                <p class="text-xs text-slate-500">Instant feedback on test files</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="material-symbols-outlined text-primary text-xl">psychology</span>
+              <div>
+                <p class="text-sm font-bold text-slate-900 dark:text-white">AI Model Testing</p>
+                <p class="text-xs text-slate-500">Experiment with different AI models</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="material-symbols-outlined text-primary text-xl">download</span>
+              <div>
+                <p class="text-sm font-bold text-slate-900 dark:text-white">Export Results</p>
+                <p class="text-xs text-slate-500">Download sandbox analysis reports</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="mt-6 flex gap-3">
+          <button onclick="window.location.href='dashboard.html'" class="flex-1 px-6 py-3 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined">play_arrow</span>
+            Start Full Analysis
+          </button>
+          <button onclick="alert('Sample files will be loaded for testing...')" class="flex-1 px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg font-bold text-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined">folder_open</span>
+            Load Sample Files
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes scale-in {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    .animate-scale-in {
+      animation: scale-in 0.2s ease-out;
+    }
+  </style>
+
+  <script>
+    // Settings Dropdown Toggle
+    function toggleSettingsMenu() {
+      const dropdown = document.getElementById('settingsDropdown');
+      dropdown.classList.toggle('hidden');
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      const dropdown = document.getElementById('settingsDropdown');
+      const settingsBtn = event.target.closest('button[onclick*="toggleSettingsMenu"]');
+      
+      if (!settingsBtn && dropdown && !dropdown.contains(event.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    // Handle logout
+    function handleLogout(event) {
+      event.preventDefault();
+      if (confirm('Are you sure you want to log out?')) {
+        // Clear any session data here
+        localStorage.removeItem('userSession');
+        sessionStorage.clear();
+        
+        // Redirect to login page
+        window.location.href = 'login.html';
+      }
+    }
+
+    // Three.js Animation Setup
+    let scene, camera, renderer, particles, particleSystem, lines;
+    let mouseX = 0, mouseY = 0;
+    let windowHalfX, windowHalfY;
+
+    function initThreeJS() {
+      const container = document.getElementById('threejs-container');
+      if (!container) return;
+
+      const width = container.offsetWidth;
+      const height = container.offsetHeight;
+      windowHalfX = width / 2;
+      windowHalfY = height / 2;
+
+      // Scene setup
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+      camera.position.z = 50;
+
+      // Renderer setup
+      renderer = new THREE.WebGLRenderer({ 
+        antialias: true, 
+        alpha: true 
+      });
+      renderer.setSize(width, height);
+      renderer.setClearColor(0x000000, 0);
+      container.insertBefore(renderer.domElement, container.firstChild);
+
+      // Create particle network
+      createParticleNetwork();
+
+      // Mouse interaction
+      container.addEventListener('mousemove', onMouseMove, false);
+      
+      // Handle resize
+      window.addEventListener('resize', onWindowResize, false);
+
+      // Start animation
+      animate();
+    }
+
+    function createParticleNetwork() {
+      // Create a more realistic 3D face structure
+      const group = new THREE.Group();
+      
+      // Head (main sphere)
+      const headGeometry = new THREE.SphereGeometry(12, 32, 32);
+      const headMaterial = new THREE.MeshPhongMaterial({
+        color: 0xffdbac,
+        wireframe: false,
+        transparent: true,
+        opacity: 0.9,
+        shininess: 30
+      });
+      const head = new THREE.Mesh(headGeometry, headMaterial);
+      group.add(head);
+      
+      // Wireframe overlay for tech effect
+      const wireframeGeometry = new THREE.SphereGeometry(12.2, 16, 16);
+      const wireframeMaterial = new THREE.MeshBasicMaterial({
+        color: 0x2563EB,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.4
+      });
+      const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+      group.add(wireframe);
+      
+      // Eyes
+      const eyeGeometry = new THREE.SphereGeometry(1.5, 16, 16);
+      const eyeMaterial = new THREE.MeshPhongMaterial({
+        color: 0x000000,
+        shininess: 100
+      });
+      
+      const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+      leftEye.position.set(-3, 2, 10);
+      group.add(leftEye);
+      
+      const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+      rightEye.position.set(3, 2, 10);
+      group.add(rightEye);
+      
+      // Eye highlights
+      const highlightGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+      const highlightMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      
+      const leftHighlight = new THREE.Mesh(highlightGeometry, highlightMaterial);
+      leftHighlight.position.set(-2.5, 2.5, 11);
+      group.add(leftHighlight);
+      
+      const rightHighlight = new THREE.Mesh(highlightGeometry, highlightMaterial);
+      rightHighlight.position.set(3.5, 2.5, 11);
+      group.add(rightHighlight);
+      
+      // Nose
+      const noseGeometry = new THREE.ConeGeometry(1, 3, 8);
+      const noseMaterial = new THREE.MeshPhongMaterial({
+        color: 0xffdbac,
+        shininess: 20
+      });
+      const nose = new THREE.Mesh(noseGeometry, noseMaterial);
+      nose.position.set(0, 0, 11);
+      nose.rotation.x = Math.PI / 2;
+      group.add(nose);
+      
+      // Mouth
+      const mouthGeometry = new THREE.TorusGeometry(2, 0.3, 8, 16, Math.PI);
+      const mouthMaterial = new THREE.MeshPhongMaterial({
+        color: 0xff6b6b,
+        shininess: 50
+      });
+      const mouth = new THREE.Mesh(mouthGeometry, mouthMaterial);
+      mouth.position.set(0, -3, 10);
+      mouth.rotation.x = Math.PI;
+      group.add(mouth);
+      
+      // Detection points overlay
+      const pointsGeometry = new THREE.BufferGeometry();
+      const pointsCount = 80;
+      const positions = new Float32Array(pointsCount * 3);
+      
+      for (let i = 0; i < pointsCount; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.random() * Math.PI;
+        const radius = 12.5;
+        
+        positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+        positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+        positions[i * 3 + 2] = radius * Math.cos(phi);
+      }
+      
+      pointsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      
+      const pointsMaterial = new THREE.PointsMaterial({
+        color: 0x10B981,
+        size: 1.2,
+        transparent: true,
+        opacity: 0.8
+      });
+      
+      const detectionPoints = new THREE.Points(pointsGeometry, pointsMaterial);
+      group.add(detectionPoints);
+      
+      // Scanning grid
+      const gridHelper = new THREE.GridHelper(30, 10, 0x2563EB, 0x2563EB);
+      gridHelper.material.transparent = true;
+      gridHelper.material.opacity = 0.2;
+      gridHelper.position.y = -15;
+      group.add(gridHelper);
+      
+      // Add lights
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+      
+      const pointLight = new THREE.PointLight(0xffffff, 0.8);
+      pointLight.position.set(20, 20, 20);
+      scene.add(pointLight);
+      
+      const pointLight2 = new THREE.PointLight(0x2563EB, 0.5);
+      pointLight2.position.set(-20, -20, 20);
+      scene.add(pointLight2);
+      
+      scene.add(group);
+      
+      // Store references
+      particleSystem = {
+        group: group,
+        head: head,
+        wireframe: wireframe,
+        leftEye: leftEye,
+        rightEye: rightEye,
+        detectionPoints: detectionPoints,
+        gridHelper: gridHelper
+      };
+    }
+
+    function updateParticles() {
+      if (!particleSystem) return;
+      
+      const { group, wireframe, detectionPoints, gridHelper } = particleSystem;
+      
+      // Rotate face group
+      group.rotation.y += 0.003;
+      group.rotation.x = Math.sin(Date.now() * 0.001) * 0.1;
+      
+      // Pulse wireframe
+      const scale = 1 + Math.sin(Date.now() * 0.002) * 0.02;
+      wireframe.scale.set(scale, scale, scale);
+      
+      // Rotate detection points independently
+      detectionPoints.rotation.y += 0.005;
+      
+      // Pulse detection points
+      const pointScale = 1 + Math.sin(Date.now() * 0.003) * 0.3;
+      detectionPoints.material.size = 1.2 * pointScale;
+      
+      // Animate grid
+      gridHelper.rotation.y += 0.002;
+    }
+
+    function updateLines(positions) {
+      // Not needed for face mesh
+    }
+
+    function onMouseMove(event) {
+      const container = document.getElementById('threejs-container');
+      const rect = container.getBoundingClientRect();
+      mouseX = (event.clientX - rect.left - windowHalfX) / 10;
+      mouseY = (event.clientY - rect.top - windowHalfY) / 10;
+    }
+
+    function onWindowResize() {
+      const container = document.getElementById('threejs-container');
+      if (!container) return;
+
+      const width = container.offsetWidth;
+      const height = container.offsetHeight;
+      windowHalfX = width / 2;
+      windowHalfY = height / 2;
+
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Update face animation
+      updateParticles();
+
+      // Rotate scene based on mouse (subtle effect)
+      if (particleSystem && particleSystem.group) {
+        particleSystem.group.rotation.y += (mouseX * 0.5 - particleSystem.group.rotation.y) * 0.05;
+        particleSystem.group.rotation.x += (-mouseY * 0.3 - particleSystem.group.rotation.x) * 0.05;
+      }
+
+      // Update latency display (simulated)
+      const latency = Math.floor(Math.random() * 10) + 10;
+      const latencyDisplay = document.getElementById('latency-display');
+      if (latencyDisplay && Math.random() > 0.95) {
+        latencyDisplay.textContent = `LATENCY: ${latency}ms`;
+      }
+
+      // Update progress bar
+      const progressBar = document.getElementById('progress-bar');
+      if (progressBar && Math.random() > 0.98) {
+        const progress = Math.floor(Math.random() * 30) + 60;
+        progressBar.style.width = `${progress}%`;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // Enhanced Scroll Animation Observer
+    const observerOptions = {
+      threshold: 0.15,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const scrollObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          console.log('Element visible:', entry.target.className);
+        }
+      });
+    }, observerOptions);
+
+    // Initialize scroll animations
+    function initScrollAnimations() {
+      const scrollElements = document.querySelectorAll('.scroll-fade, .scroll-fade-left, .scroll-fade-right, .scroll-scale');
+      console.log('Found scroll elements:', scrollElements.length);
+      scrollElements.forEach(el => {
+        scrollObserver.observe(el);
+      });
+    }
+
+    // Parallax Effect on Scroll
+    let ticking = false;
+    function handleParallax() {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrolled = window.pageYOffset;
+          const parallaxLayers = document.querySelectorAll('.parallax-layer');
+          
+          parallaxLayers.forEach(layer => {
+            const speed = 0.5;
+            const yPos = -(scrolled * speed);
+            layer.style.transform = `translateY(${yPos}px)`;
+          });
+          
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }
+
+    // Initialize everything when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOM loaded, initializing scroll effects...');
+      initScrollAnimations();
+      initThreeJS();
+      window.addEventListener('scroll', handleParallax);
+    });
+
+    // Open Sandbox Modal
+    function openSandbox() {
+      const modal = document.getElementById('sandboxModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.body.style.overflow = 'hidden';
+    }
+
+    // Close Sandbox Modal
+    function closeSandbox() {
+      const modal = document.getElementById('sandboxModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      document.body.style.overflow = 'auto';
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('sandboxModal')?.addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeSandbox();
+      }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeSandbox();
+      }
+    });
+  </script>
+</body>
+</html>
