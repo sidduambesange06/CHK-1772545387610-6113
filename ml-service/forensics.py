@@ -66,7 +66,12 @@ def img_to_base64(pil_img, max_dim=400):
         ratio = max_dim / max(pil_img.size)
         pil_img = pil_img.resize((int(pil_img.width * ratio), int(pil_img.height * ratio)), Image.LANCZOS)
     buf = io.BytesIO()
-    pil_img.save(buf, 'JPEG', quality=60)
+    # JPEG doesn't support RGBA — use PNG for transparent images
+    if pil_img.mode == 'RGBA':
+        pil_img.save(buf, 'PNG', optimize=True)
+    else:
+        pil_img = pil_img.convert('RGB')
+        pil_img.save(buf, 'JPEG', quality=60)
     buf.seek(0)
     return base64.b64encode(buf.getvalue()).decode()
 
