@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DeepScan - Upload</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; background: #1a1a1a; }
+        .navbar {
+            background: #2c3e50; color: white; padding: 14px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .navbar h2 { margin: 0; }
+        .nav-links a { color: white; text-decoration: none; margin-left: 20px; }
+        .status-dot {
+            display: inline-block; width: 8px; height: 8px;
+            border-radius: 50%; background: #e74c3c; margin-right: 5px;
+        }
+        .status-dot.up { background: #2ecc71; }
+        .container { max-width: 700px; margin: 60px auto; text-align: center; padding: 0 20px; }
+        h1 { color: #fff; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.7); }
+        p.desc { color: #e0e0e0; margin-bottom: 40px; text-shadow: 1px 1px 3px rgba(0,0,0,0.7); }
+        .upload-box {
+            border: 2px dashed #aaa; border-radius: 8px; padding: 50px 20px;
+            background: rgba(255,255,255,0.95); cursor: pointer; transition: border-color 0.3s;
+        }
+        .upload-box.dragover { border-color: #2c3e50; background: rgba(44,62,80,0.1); }
+        .upload-box:hover { border-color: #2c3e50; }
+        .upload-icon { font-size: 48px; color: #999; }
+        .upload-box p { color: #777; margin-top: 10px; }
+        .upload-box small { color: #aaa; }
+        .file-name { margin-top: 15px; color: #2c3e50; font-weight: bold; }
+        input[type="file"] { display: none; }
+        .options {
+            margin-top: 30px; text-align: left;
+            background: rgba(255,255,255,0.95); padding: 20px 25px; border-radius: 8px;
+        }
+        .options h3 { margin-top: 0; color: #2c3e50; }
+        .options label { display: block; margin: 8px 0; color: #444; cursor: pointer; }
+        .btn {
+            background: #2c3e50; color: white; border: none;
+            padding: 12px 35px; font-size: 16px; border-radius: 5px;
+            margin-top: 25px; cursor: pointer; width: 100%;
+        }
+        .btn:hover { background: #1a252f; }
+        .btn:disabled { background: #666; cursor: not-allowed; }
+        .loading {
+            display: none; margin-top: 20px; color: #e0e0e0;
+            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;
+        }
+        .loading.show { display: block; }
+        .progress-bar {
+            height: 6px; background: #333; border-radius: 3px; margin-top: 10px; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; background: #2ecc71; border-radius: 3px;
+            width: 0%; transition: width 0.4s ease;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+        .error-msg { color: #e74c3c; margin-top: 15px; font-size: 14px; }
+        .footer { text-align: center; padding: 20px; color: #999; margin-top: 50px; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h2><a href="index.html" style="color:white;text-decoration:none;">DeepScan</a></h2>
+        <div class="nav-links">
+            <span><span class="status-dot" id="mlDot"></span><span id="mlStatus" style="font-size:12px">checking...</span></span>
+            <a href="index.html">Upload</a>
+            <a href="results.html">Results</a>
+            <a href="login.html">Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Upload Media for Analysis</h1>
+        <p class="desc">Upload an image, video or audio file to check for deepfake manipulation.</p>
+
+        <div class="upload-box" id="uploadBox" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon">&#128228;</div>
+            <p>Drag & drop your file here</p>
+            <small>or click to browse (jpg, png, mp4, wav, mp3)</small>
+            <div class="file-name" id="fileName"></div>
+        </div>
+        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.gif,.webp,.mp4,.avi,.mov,.mp3,.wav,.ogg" />
+
+        <div class="options">
+            <h3>Detection Type</h3>
+            <label><input type="radio" name="dtype" value="image" checked> Image Deepfake Detection</label>
+            <label><input type="radio" name="dtype" value="video"> Video Manipulation Check</label>
+            <label><input type="radio" name="dtype" value="audio"> Audio Synthesis Detection</label>
+        </div>
+
+        <button class="btn" id="analyzeBtn" onclick="startAnalysis()">Analyze File</button>
+
+        <div class="loading" id="loading">
+            <div id="loadingMsg">Uploading file...</div>
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+
+        <div class="error-msg" id="errorMsg"></div>
+    </div>
+
+    <div class="footer">DeepScan &copy; 2026 | CHAKRAVYUH 2.0</div>
+
+    <script>
+        const API = 'http://localhost:3000/api'
+        let selectedFile = null
+
+        // check if backend is up
+        async function checkHealth() {
+            try {
+                const r = await fetch(`${API}/health`, { signal: AbortSignal.timeout(3000) })
+                const d = await r.json()
+                document.getElementById('mlDot').className = 'status-dot' + (d.ml ? ' up' : '')
+                document.getElementById('mlStatus').textContent = d.ml ? 'ML online' : 'ML offline'
+            } catch(e) {
+                document.getElementById('mlStatus').textContent = 'API offline'
+            }
+        }
+        checkHealth()
+
+        const uploadBox = document.getElementById('uploadBox')
+        const fileInput = document.getElementById('fileInput')
+        const fileName  = document.getElementById('fileName')
+
+        uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.classList.add('dragover') })
+        uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('dragover'))
+        uploadBox.addEventListener('drop', e => {
+            e.preventDefault()
+            uploadBox.classList.remove('dragover')
+            if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0])
+        })
+        fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]) })
+
+        function handleFile(file) {
+            selectedFile = file
+            fileName.textContent = `Selected: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`
+
+            // auto-select detection type based on file
+            const ext = file.name.split('.').pop().toLowerCase()
+            if (['jpg','jpeg','png','gif','webp'].includes(ext)) {
+                document.querySelector('input[value="image"]').checked = true
+            } else if (['mp4','avi','mov','mkv'].includes(ext)) {
+                document.querySelector('input[value="video"]').checked = true
+            } else if (['mp3','wav','ogg','flac'].includes(ext)) {
+                document.querySelector('input[value="audio"]').checked = true
+            }
+        }
+
+        function setProgress(pct, msg) {
+            document.getElementById('progressFill').style.width = pct + '%'
+            document.getElementById('loadingMsg').textContent = msg
+        }
+
+        async function startAnalysis() {
+            if (!selectedFile) {
+                document.getElementById('errorMsg').textContent = 'Please select a file first'
+                return
+            }
+
+            const dtype = document.querySelector('input[name="dtype"]:checked').value
+            const btn = document.getElementById('analyzeBtn')
+            const loading = document.getElementById('loading')
+            document.getElementById('errorMsg').textContent = ''
+
+            btn.disabled = true
+            loading.classList.add('show')
+            setProgress(10, 'Uploading file...')
+
+            try {
+                // step 1: upload
+                const form = new FormData()
+                form.append('file', selectedFile)
+                const upRes = await fetch(`${API}/upload`, { method: 'POST', body: form })
+                if (!upRes.ok) throw new Error('Upload failed: ' + upRes.status)
+                const upData = await upRes.json()
+
+                setProgress(40, `Analyzing ${dtype}... this may take a minute`)
+
+                // step 2: analyze based on type
+                const endpoint = dtype === 'video' ? '/analyze-video' : dtype === 'audio' ? '/analyze-audio' : '/analyze'
+                const anaRes = await fetch(`${API}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filePath: upData.path,
+                        fileId: upData.fileId,
+                        filename: upData.filename
+                    })
+                })
+                if (!anaRes.ok) throw new Error('Analysis failed: ' + anaRes.status)
+                const result = await anaRes.json()
+
+                setProgress(100, 'Done!')
+
+                // store result and redirect
+                localStorage.setItem('scanResult', JSON.stringify({ ...result, fileId: upData.fileId, originalName: upData.originalName || selectedFile.name }))
+                setTimeout(() => { window.location.href = 'results.html' }, 500)
+
+            } catch(e) {
+                document.getElementById('errorMsg').textContent = 'Error: ' + e.message
+                btn.disabled = false
+                loading.classList.remove('show')
+            }
+        }
+    </script>
+</body>
+</html>
