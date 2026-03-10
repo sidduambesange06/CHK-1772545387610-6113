@@ -178,7 +178,19 @@ async function analyzeFile(file) {
         showProgress(100, 'Done!');
 
         // ── STEP 3: Save + redirect to results.html ──
-        sessionStorage.setItem('scanResult', JSON.stringify(result));
+        try {
+            sessionStorage.setItem('scanResult', JSON.stringify(result));
+        } catch (e) {
+            // Storage quota exceeded — strip large X-ray base64 data and retry
+            const lite = Object.assign({}, result);
+            if (lite.xray) {
+                delete lite.xray.noiseMap;
+                delete lite.xray.freqMap;
+                delete lite.xray.probMap;
+            }
+            delete lite.heatmapBase64;
+            try { sessionStorage.setItem('scanResult', JSON.stringify(lite)); } catch (e2) { /* proceed anyway */ }
+        }
 
         // add to local history
         const history = JSON.parse(localStorage.getItem('forensics_history') || '[]');

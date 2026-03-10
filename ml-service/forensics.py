@@ -17,20 +17,25 @@ _img_model_primary = None
 _img_model_secondary = None
 
 print('[forensics] loading AI image detection models...')
-# NOTE: Organika/sdxl-detector disabled — it returns 99% "artificial" for ALL images
-# including real camera photos, making it useless as a general detector.
-# Using dima806 as the sole neural model (correctly distinguishes real vs fake).
-_img_model_primary = None
+try:
+    _img_model_primary = pipeline(
+        'image-classification',
+        model='Organika/sdxl-detector',
+        device=_device
+    )
+    print('[forensics] primary model (Organika/sdxl-detector) ready')
+except Exception as e:
+    print(f'[forensics] primary model failed: {e}')
 
 try:
     _img_model_secondary = pipeline(
         'image-classification',
         model='dima806/deepfake_vs_real_image_detection',
-        device=_device
+        device=_device if _img_model_primary is None else -1
     )
-    print('[forensics] model (dima806/deepfake_vs_real_image_detection) ready')
+    print('[forensics] secondary model (dima806) ready')
 except Exception as e:
-    print(f'[forensics] model failed: {e}')
+    print(f'[forensics] secondary model failed: {e}')
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -55,9 +60,13 @@ def ela_to_base64(ela_img):
     return base64.b64encode(buf.getvalue()).decode()
 
 
-def img_to_base64(pil_img):
+def img_to_base64(pil_img, max_dim=400):
+    # resize to keep sessionStorage under quota (~5MB limit)
+    if max(pil_img.size) > max_dim:
+        ratio = max_dim / max(pil_img.size)
+        pil_img = pil_img.resize((int(pil_img.width * ratio), int(pil_img.height * ratio)), Image.LANCZOS)
     buf = io.BytesIO()
-    pil_img.save(buf, 'PNG')
+    pil_img.save(buf, 'JPEG', quality=60)
     buf.seek(0)
     return base64.b64encode(buf.getvalue()).decode()
 
@@ -694,25 +703,23 @@ def run_deepfake_model(image_path):
     if len(scores) == 1:
         return round(scores[0], 2), models_used
 
-    max_s = max(scores)
-    avg_s = sum(scores) / len(scores)
-    disagreement = max(scores) - min(scores)
+    # dima806 is the RELIABLE model (secondary, index 1 if both loaded)
+    # organika always says 95-99% artificial — unreliable alone but useful as boost
+    # Strategy: trust dima806 as primary, let organika boost ONLY when dima806 agrees
+    dima_score = scores[-1]   # dima806 loaded second
+    orga_score = scores[0]    # organika loaded first
 
-    # If models disagree strongly (>35 pts apart), trust the average —
-    # one model may not be suited for this image type (e.g. face model on landscape)
-    if disagreement > 35:
-        result = round(avg_s, 2)
-    # Both models confidently agree it's fake
-    elif all(s > 65 for s in scores):
-        result = round(max_s, 2)
-    # Both models moderately agree
-    elif all(s > 45 for s in scores):
-        result = round(avg_s * 0.7 + max_s * 0.3, 2)
+    if dima_score > 50:
+        # dima806 thinks it's fake — boost with organika agreement
+        result = round(dima_score * 0.7 + orga_score * 0.3, 2)
+    elif dima_score > 30 and orga_score > 90:
+        # dima806 uncertain but organika very confident → cautious boost
+        result = round(dima_score * 0.6 + orga_score * 0.15 + 10, 2)
     else:
-        # Models lean real or uncertain → use average (reduces false positives)
-        result = round(avg_s, 2)
+        # dima806 says real — trust it, ignore organika
+        result = round(dima_score, 2)
 
-    print(f'[model:ensemble] scores={scores} max={max_s:.1f} avg={avg_s:.1f} disagree={disagreement:.1f} result={result}')
+    print(f'[model:ensemble] orga={orga_score:.1f} dima={dima_score:.1f} result={result}')
     return result, models_used
 
 
