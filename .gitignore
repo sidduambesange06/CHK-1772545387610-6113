@@ -1,8 +1,28 @@
+# dependencies
 node_modules/
-api/uploads/
-api/config/serviceAccountKey.json
+
+# environment variables
+.env
 api/.env
-ml-service/temp/
+
+# uploads
+api/uploads/
+uploads/
+
+# firebase keys
+api/config/serviceAccountKey.json
+
+# python cache
 __pycache__/
 *.pyc
-.env
+
+# ML temp
+ml-service/temp/
+
+# logs
+*.log
+
+# OS files
+.DS_Store
+.claude/
+Thumbs.db
