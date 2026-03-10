@@ -17,25 +17,20 @@ _img_model_primary = None
 _img_model_secondary = None
 
 print('[forensics] loading AI image detection models...')
-try:
-    _img_model_primary = pipeline(
-        'image-classification',
-        model='Organika/sdxl-detector',
-        device=_device
-    )
-    print('[forensics] primary model (Organika/sdxl-detector) ready')
-except Exception as e:
-    print(f'[forensics] primary model failed: {e}')
+# NOTE: Organika/sdxl-detector disabled — it returns 99% "artificial" for ALL images
+# including real camera photos, making it useless as a general detector.
+# Using dima806 as the sole neural model (correctly distinguishes real vs fake).
+_img_model_primary = None
 
 try:
     _img_model_secondary = pipeline(
         'image-classification',
         model='dima806/deepfake_vs_real_image_detection',
-        device=_device if _img_model_primary is None else -1
+        device=_device
     )
-    print('[forensics] secondary model (dima806) ready')
+    print('[forensics] model (dima806/deepfake_vs_real_image_detection) ready')
 except Exception as e:
-    print(f'[forensics] secondary model failed: {e}')
+    print(f'[forensics] model failed: {e}')
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -875,9 +870,9 @@ def analyze_image(image_path):
     final = round(min(100, max(0, final)), 2)
 
     # ── VERDICT ────────────────────────────────────────────────────
-    if final >= 68:
+    if final >= 62:
         label = 'MANIPULATED'
-    elif final >= 45:
+    elif final >= 40:
         label = 'SUSPICIOUS'
     else:
         label = 'AUTHENTIC'
