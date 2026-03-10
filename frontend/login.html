@@ -2,177 +2,159 @@
 <html class="dark" lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Deepfake AI - Sign In</title>
-  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Deepfake AI - Login</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
   <script src="/config.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script>
+  <script id="tailwind-config">
     tailwind.config = {
-      darkMode: 'class',
+      darkMode: "class",
       theme: {
         extend: {
-          colors: { primary: '#1e3b8a' },
-          fontFamily: { display: ['Inter', 'sans-serif'] }
-        }
-      }
+          colors: {
+            "primary": "#1e3b8a",
+            "background-light": "#f6f6f8",
+            "background-dark": "#0f172a",
+          },
+          fontFamily: { "display": ["Inter", "sans-serif"] },
+        },
+      },
     }
   </script>
   <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: #0f172a;
-      min-height: 100vh;
-      min-height: 100dvh;
-      margin: 0;
-      overflow-x: hidden;
-    }
     .material-symbols-outlined {
       font-family: 'Material Symbols Outlined';
-      font-weight: 400; font-style: normal; font-size: 22px;
-      display: inline-flex; line-height: 1;
-      -webkit-font-smoothing: antialiased;
+      font-weight: 400; font-style: normal; font-size: 24px;
+      display: inline-flex; line-height: 1; text-transform: none;
+      letter-spacing: normal; word-wrap: normal; white-space: nowrap;
+      direction: ltr; -webkit-font-smoothing: antialiased;
     }
-    .glass {
-      background: rgba(15,23,42,0.75);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      border: 1px solid rgba(255,255,255,0.08);
+    body { overflow-x: hidden; min-height: 100vh; }
+    #threejs-bg {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%; z-index: 0;
     }
-    .input-field {
-      width: 100%; padding: 12px 12px 12px 44px;
-      background: rgba(30,41,59,0.8);
-      border: 1px solid rgba(100,116,139,0.4);
-      border-radius: 12px; color: #f1f5f9;
-      font-size: 15px; outline: none;
-      transition: border-color .2s, box-shadow .2s;
+    .login-container { position: relative; z-index: 10; }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
-    .input-field::placeholder { color: #64748b; }
-    .input-field:focus {
-      border-color: #1e3b8a;
-      box-shadow: 0 0 0 3px rgba(30,59,138,0.25);
+    .input-glow:focus { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3); }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50%       { transform: translateY(-20px); }
     }
-    .input-icon {
-      position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
-      color: #64748b; font-size: 20px; pointer-events: none;
-    }
-    .btn-primary {
-      width: 100%; padding: 13px;
-      background: #1e3b8a; color: #fff;
-      border: none; border-radius: 12px;
-      font-size: 15px; font-weight: 700; cursor: pointer;
-      transition: background .2s, transform .1s;
-    }
-    .btn-primary:hover { background: #1e40af; }
-    .btn-primary:active { transform: scale(.98); }
-    .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
-    .btn-google {
-      width: 100%; padding: 13px;
-      background: #fff; color: #1e293b;
-      border: 1px solid #e2e8f0; border-radius: 12px;
-      font-size: 15px; font-weight: 600; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 10px;
-      transition: background .2s, box-shadow .2s;
-    }
-    .btn-google:hover { background: #f8fafc; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
-    .btn-google:active { transform: scale(.98); }
-    .tab-btn {
-      flex: 1; padding: 10px;
-      background: transparent; border: none;
-      color: #94a3b8; font-size: 14px; font-weight: 600; cursor: pointer;
-      border-radius: 8px; transition: all .2s;
-    }
-    .tab-btn.active { background: #1e3b8a; color: #fff; }
-    .divider {
-      display: flex; align-items: center; gap: 12px;
-      color: #475569; font-size: 13px; margin: 4px 0;
-    }
-    .divider::before, .divider::after {
-      content: ''; flex: 1; height: 1px; background: rgba(100,116,139,0.3);
-    }
-    .err { color: #f87171; font-size: 13px; text-align: center; margin-top: 6px; }
-    .ok  { color: #34d399; font-size: 13px; text-align: center; margin-top: 6px; }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
+    .float-animation { animation: float 6s ease-in-out infinite; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(30px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .fade-up { animation: fadeUp .5s ease-out forwards; }
-    /* Mobile: hide left branding panel */
-    @media (max-width: 1023px) {
-      .brand-panel { display: none !important; }
+    .fade-in { animation: fadeIn 0.8s ease-out forwards; }
+    .fade-in-delay-1 { animation-delay: 0.2s; opacity: 0; }
+    .fade-in-delay-2 { animation-delay: 0.4s; opacity: 0; }
+    .fade-in-delay-3 { animation-delay: 0.6s; opacity: 0; }
+    /* Tab buttons */
+    .tab-btn {
+      flex: 1; padding: 8px 0; background: transparent;
+      border: none; color: #94a3b8; font-size: 14px; font-weight: 600;
+      cursor: pointer; border-radius: 8px; transition: all .2s;
     }
+    .tab-btn.active { background: #1e3b8a; color: #fff; }
+    .err-msg { color: #f87171; font-size: 13px; text-align: center; margin-top: 4px; min-height: 18px; }
+    .ok-msg  { color: #34d399; font-size: 13px; text-align: center; margin-top: 4px; }
   </style>
 </head>
-<body class="text-slate-100">
+<body class="bg-background-dark font-display text-slate-100">
 
-  <!-- Animated Background -->
-  <div style="position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;">
-    <div style="position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(30,59,138,0.18) 0%,transparent 70%);top:-200px;left:-200px;animation:pulse 8s ease-in-out infinite;"></div>
-    <div style="position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,0.12) 0%,transparent 70%);bottom:-150px;right:-150px;animation:pulse 10s ease-in-out infinite 2s;"></div>
-  </div>
-  <style>@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}</style>
+  <!-- Three.js Background -->
+  <div id="threejs-bg"></div>
 
-  <!-- Main Layout -->
-  <div style="position:relative;z-index:1;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:16px;">
-    <div style="width:100%;max-width:960px;display:grid;grid-template-columns:1fr 420px;gap:48px;align-items:center;">
+  <!-- Login Container -->
+  <div class="login-container min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
 
-      <!-- Left Branding (desktop only) -->
-      <div class="brand-panel" style="display:block;">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:28px;">
-          <span class="material-symbols-outlined" style="font-size:44px;color:#1e3b8a;">fingerprint</span>
-          <span style="font-size:28px;font-weight:900;color:#fff;">Deepfake AI</span>
-        </div>
-        <h2 style="font-size:42px;font-weight:900;color:#fff;line-height:1.2;margin-bottom:16px;">
-          Secure Evidence<br/><span style="color:#3b82f6;">Verification</span>
-        </h2>
-        <p style="color:#94a3b8;font-size:16px;line-height:1.7;margin-bottom:32px;">
-          Advanced AI-powered forensic analysis. Detect deepfakes, verify authenticity, and ensure evidence integrity with 99.9% accuracy.
-        </p>
-        <div style="display:flex;flex-direction:column;gap:16px;">
-          <div style="display:flex;align-items:center;gap:14px;">
-            <div style="width:40px;height:40px;border-radius:10px;background:rgba(30,59,138,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <span class="material-symbols-outlined" style="color:#3b82f6;font-size:20px;">verified</span>
-            </div>
-            <div><p style="color:#fff;font-weight:700;margin:0;">99.9% Accuracy</p><p style="color:#64748b;font-size:13px;margin:0;">Industry-leading detection</p></div>
+      <!-- Left Side — Branding (desktop only) -->
+      <div class="hidden lg:block fade-in">
+        <div class="float-animation">
+          <div class="flex items-center gap-3 mb-8">
+            <span class="material-symbols-outlined text-5xl text-primary">fingerprint</span>
+            <h1 class="text-4xl font-black text-white">Deepfake AI</h1>
           </div>
-          <div style="display:flex;align-items:center;gap:14px;">
-            <div style="width:40px;height:40px;border-radius:10px;background:rgba(16,185,129,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <span class="material-symbols-outlined" style="color:#10b981;font-size:20px;">speed</span>
+          <h2 class="text-5xl font-black text-white mb-6 leading-tight">
+            Secure Evidence<br/>
+            <span class="text-primary">Verification</span>
+          </h2>
+          <p class="text-slate-400 text-lg leading-relaxed mb-8">
+            Advanced AI-powered forensic analysis platform trusted by experts worldwide.
+            Detect deepfakes, verify authenticity, and ensure evidence integrity.
+          </p>
+          <div class="space-y-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-primary text-xl">verified</span>
+              </div>
+              <div>
+                <p class="text-white font-bold">99.9% Accuracy</p>
+                <p class="text-slate-400 text-sm">Industry-leading detection rates</p>
+              </div>
             </div>
-            <div><p style="color:#fff;font-weight:700;margin:0;">Under 30 Seconds</p><p style="color:#64748b;font-size:13px;margin:0;">Real-time analysis</p></div>
-          </div>
-          <div style="display:flex;align-items:center;gap:14px;">
-            <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <span class="material-symbols-outlined" style="color:#f59e0b;font-size:20px;">security</span>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-emerald-500 text-xl">speed</span>
+              </div>
+              <div>
+                <p class="text-white font-bold">Lightning Fast</p>
+                <p class="text-slate-400 text-sm">Results in under 30 seconds</p>
+              </div>
             </div>
-            <div><p style="color:#fff;font-weight:700;margin:0;">Bank-Grade Security</p><p style="color:#64748b;font-size:13px;margin:0;">AES-256 encrypted</p></div>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                <span class="material-symbols-outlined text-amber-500 text-xl">security</span>
+              </div>
+              <div>
+                <p class="text-white font-bold">Bank-Grade Security</p>
+                <p class="text-slate-400 text-sm">AES-256 encryption standard</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Right Auth Card -->
-      <div class="fade-up" style="width:100%;">
-        <div class="glass" style="border-radius:24px;padding:32px;width:100%;">
+      <!-- Right Side — Auth Card -->
+      <div class="w-full max-w-md mx-auto fade-in fade-in-delay-1">
+        <div class="glass-card rounded-3xl p-8 lg:p-10 shadow-2xl">
 
           <!-- Mobile Logo -->
-          <div style="display:none;align-items:center;gap:10px;justify-content:center;margin-bottom:24px;" id="mobileLogo">
-            <span class="material-symbols-outlined" style="font-size:32px;color:#1e3b8a;">fingerprint</span>
-            <span style="font-size:20px;font-weight:900;color:#fff;">Deepfake AI</span>
+          <div class="lg:hidden flex items-center gap-3 mb-8 justify-center">
+            <span class="material-symbols-outlined text-3xl text-primary">fingerprint</span>
+            <h1 class="text-2xl font-black text-white">Deepfake AI</h1>
           </div>
 
-          <!-- Tab Toggle -->
-          <div style="display:flex;background:rgba(30,41,59,0.6);border-radius:10px;padding:4px;gap:4px;margin-bottom:24px;">
+          <div class="text-center mb-6">
+            <h2 class="text-3xl font-black text-white mb-2">Welcome Back</h2>
+            <p class="text-slate-400">Sign in to your forensic dashboard</p>
+          </div>
+
+          <!-- Sign In / Sign Up Tab Toggle -->
+          <div class="flex bg-slate-900/60 rounded-xl p-1 gap-1 mb-6">
             <button class="tab-btn active" id="tabSignIn" onclick="switchTab('signin')">Sign In</button>
-            <button class="tab-btn" id="tabSignUp" onclick="switchTab('signup')">Sign Up</button>
+            <button class="tab-btn"        id="tabSignUp" onclick="switchTab('signup')">Sign Up</button>
           </div>
 
-          <!-- Google OAuth — works for both sign in and sign up -->
-          <button class="btn-google" onclick="googleAuth()" id="googleBtn">
-            <svg width="20" height="20" viewBox="0 0 24 24">
+          <!-- Google Button -->
+          <button
+            onclick="googleAuth()"
+            id="googleBtn"
+            class="w-full flex items-center justify-center gap-3 py-3 bg-white text-slate-800 font-semibold rounded-xl hover:bg-slate-100 transition-all active:scale-95 shadow mb-5"
+          >
+            <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
               <path fill="#EA4335" d="M5.26 9.77A7.02 7.02 0 0 1 12 5c1.8 0 3.42.66 4.68 1.74L19.92 3.5A11.96 11.96 0 0 0 12 1C8.19 1 4.88 3.03 2.93 6.07l2.33 3.7z"/>
               <path fill="#34A853" d="M12 23c3.18 0 6.03-1.05 8.04-2.85l-3.71-3.05A7.02 7.02 0 0 1 12 19a7 7 0 0 1-6.63-4.73L2.1 17.93A11.97 11.97 0 0 0 12 23z"/>
               <path fill="#4A90D9" d="M22.84 12.22c0-.78-.07-1.53-.2-2.25H12v4.25h6.1c-.28 1.35-1.07 2.5-2.22 3.27l3.7 3.06c2.17-2 3.25-4.96 3.25-8.33z"/>
@@ -181,226 +163,262 @@
             Continue with Google
           </button>
 
-          <div class="divider" style="margin:20px 0;">or</div>
-
-          <!-- Sign In Form -->
-          <div id="signinForm">
-            <div style="display:flex;flex-direction:column;gap:14px;">
-              <div style="position:relative;">
-                <span class="material-symbols-outlined input-icon">mail</span>
-                <input id="siEmail" type="email" class="input-field" placeholder="Email address" autocomplete="email" />
-              </div>
-              <div style="position:relative;">
-                <span class="material-symbols-outlined input-icon">lock</span>
-                <input id="siPassword" type="password" class="input-field" placeholder="Password" autocomplete="current-password" style="padding-right:44px;" />
-                <button type="button" onclick="togglePwd('siPassword','siEye')" style="position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;color:#64748b;cursor:pointer;padding:0;">
-                  <span class="material-symbols-outlined" id="siEye" style="font-size:20px;">visibility</span>
-                </button>
-              </div>
-              <div style="text-align:right;">
-                <a href="#" onclick="forgotPassword(event)" style="color:#3b82f6;font-size:13px;font-weight:600;text-decoration:none;">Forgot password?</a>
-              </div>
-              <button class="btn-primary" id="siBtn" onclick="emailSignIn()">Sign In</button>
-              <div id="siMsg"></div>
+          <!-- Divider -->
+          <div class="relative mb-5">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-slate-700"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+              <span class="px-4 bg-slate-900/60 text-slate-400 rounded">or with email</span>
             </div>
           </div>
 
-          <!-- Sign Up Form -->
-          <div id="signupForm" style="display:none;">
-            <div style="display:flex;flex-direction:column;gap:14px;">
-              <div style="position:relative;">
-                <span class="material-symbols-outlined input-icon">person</span>
-                <input id="suName" type="text" class="input-field" placeholder="Full name" autocomplete="name" />
+          <!-- ── SIGN IN FORM ── -->
+          <div id="signinForm">
+            <div class="space-y-4">
+              <!-- Email -->
+              <div class="relative">
+                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl">mail</span>
+                <input id="siEmail" type="email" placeholder="Email address" autocomplete="email"
+                  class="w-full pl-12 pr-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-primary input-glow transition-all" />
               </div>
-              <div style="position:relative;">
-                <span class="material-symbols-outlined input-icon">mail</span>
-                <input id="suEmail" type="email" class="input-field" placeholder="Email address" autocomplete="email" />
-              </div>
-              <div style="position:relative;">
-                <span class="material-symbols-outlined input-icon">lock</span>
-                <input id="suPassword" type="password" class="input-field" placeholder="Password (min 6 chars)" autocomplete="new-password" style="padding-right:44px;" />
-                <button type="button" onclick="togglePwd('suPassword','suEye')" style="position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;color:#64748b;cursor:pointer;padding:0;">
-                  <span class="material-symbols-outlined" id="suEye" style="font-size:20px;">visibility</span>
+              <!-- Password -->
+              <div class="relative">
+                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl">lock</span>
+                <input id="siPassword" type="password" placeholder="Password" autocomplete="current-password"
+                  class="w-full pl-12 pr-12 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-primary input-glow transition-all" />
+                <button type="button" onclick="togglePwd('siPassword','siEye')"
+                  class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors">
+                  <span id="siEye" class="material-symbols-outlined text-xl">visibility</span>
                 </button>
               </div>
-              <button class="btn-primary" id="suBtn" onclick="emailSignUp()">Create Account</button>
-              <div id="suMsg"></div>
+              <!-- Forgot -->
+              <div class="text-right">
+                <a href="#" onclick="forgotPassword(event)" class="text-sm text-primary hover:text-blue-400 font-semibold transition-colors">
+                  Forgot password?
+                </a>
+              </div>
+              <!-- Submit -->
+              <button id="siBtn" onclick="emailSignIn()"
+                class="w-full py-3 bg-primary hover:bg-blue-700 text-white font-bold rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/25">
+                Sign In
+              </button>
+              <p id="siMsg" class="err-msg"></p>
+            </div>
+          </div>
+
+          <!-- ── SIGN UP FORM ── -->
+          <div id="signupForm" style="display:none;">
+            <div class="space-y-4">
+              <!-- Name -->
+              <div class="relative">
+                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl">person</span>
+                <input id="suName" type="text" placeholder="Full name" autocomplete="name"
+                  class="w-full pl-12 pr-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-primary input-glow transition-all" />
+              </div>
+              <!-- Email -->
+              <div class="relative">
+                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl">mail</span>
+                <input id="suEmail" type="email" placeholder="Email address" autocomplete="email"
+                  class="w-full pl-12 pr-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-primary input-glow transition-all" />
+              </div>
+              <!-- Password -->
+              <div class="relative">
+                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl">lock</span>
+                <input id="suPassword" type="password" placeholder="Password (min 6 chars)" autocomplete="new-password"
+                  class="w-full pl-12 pr-12 py-3 bg-slate-900/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-primary input-glow transition-all" />
+                <button type="button" onclick="togglePwd('suPassword','suEye')"
+                  class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors">
+                  <span id="suEye" class="material-symbols-outlined text-xl">visibility</span>
+                </button>
+              </div>
+              <!-- Submit -->
+              <button id="suBtn" onclick="emailSignUp()"
+                class="w-full py-3 bg-primary hover:bg-blue-700 text-white font-bold rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/25">
+                Create Account
+              </button>
+              <p id="suMsg" class="err-msg"></p>
             </div>
           </div>
 
         </div>
-
-        <!-- Terms note -->
-        <p style="color:#475569;font-size:12px;text-align:center;margin-top:16px;line-height:1.6;">
-          By continuing you agree to our Terms of Service and Privacy Policy.
-        </p>
       </div>
-
     </div>
   </div>
 
   <script>
-    // ── Init Firebase ────────────────────────────────────────────
+    // ── Three.js Background ───────────────────────────────────────
+    let scene, camera, renderer, particles;
+    let mouseX = 0, mouseY = 0;
+
+    function initThreeJS() {
+      const container = document.getElementById('threejs-bg');
+      scene    = new THREE.Scene();
+      camera   = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 50;
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x0f172a, 1);
+      container.appendChild(renderer.domElement);
+
+      const count = 150;
+      const geo   = new THREE.BufferGeometry();
+      const pos   = new Float32Array(count * 3);
+      const vel   = [];
+      for (let i = 0; i < count * 3; i += 3) {
+        pos[i]   = (Math.random() - .5) * 150;
+        pos[i+1] = (Math.random() - .5) * 150;
+        pos[i+2] = (Math.random() - .5) * 100;
+        vel.push({ x: (Math.random()-.5)*.05, y: (Math.random()-.5)*.05, z: (Math.random()-.5)*.05 });
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.PointsMaterial({ color: 0x2563EB, size: 2, transparent: true, opacity: .6, blending: THREE.AdditiveBlending });
+      particles = new THREE.Points(geo, mat);
+      particles.userData.vel = vel;
+      scene.add(particles);
+
+      document.addEventListener('mousemove', e => {
+        mouseX = (e.clientX / window.innerWidth)  * 2 - 1;
+        mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+      });
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+      animate();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const p = particles.geometry.attributes.position.array;
+      const v = particles.userData.vel;
+      for (let i = 0; i < p.length; i += 3) {
+        p[i] += v[i/3].x; p[i+1] += v[i/3].y; p[i+2] += v[i/3].z;
+        if (Math.abs(p[i])   > 75) v[i/3].x *= -1;
+        if (Math.abs(p[i+1]) > 75) v[i/3].y *= -1;
+        if (Math.abs(p[i+2]) > 50) v[i/3].z *= -1;
+      }
+      particles.geometry.attributes.position.needsUpdate = true;
+      particles.rotation.y += (mouseX * .5 - particles.rotation.y) * .05;
+      particles.rotation.x += (mouseY * .5 - particles.rotation.x) * .05;
+      particles.rotation.y += .001;
+      renderer.render(scene, camera);
+    }
+
+    document.addEventListener('DOMContentLoaded', initThreeJS);
+
+    // ── Firebase ─────────────────────────────────────────────────
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     const auth = firebase.auth();
 
-    // ── If already logged in → skip to dashboard ────────────────
-    auth.onAuthStateChanged(function(user) {
-      if (user) window.location.replace('/dashboard.html');
-    });
+    // Already logged in → go straight to dashboard
+    auth.onAuthStateChanged(user => { if (user) window.location.replace('/dashboard.html'); });
 
-    // ── Mobile logo visibility ───────────────────────────────────
-    if (window.innerWidth < 1024) {
-      document.getElementById('mobileLogo').style.display = 'flex';
-    }
-
-    // ── Tab switching ────────────────────────────────────────────
+    // ── Tab Switch ────────────────────────────────────────────────
     function switchTab(tab) {
-      const isSignIn = tab === 'signin';
-      document.getElementById('tabSignIn').className  = 'tab-btn' + (isSignIn ? ' active' : '');
-      document.getElementById('tabSignUp').className  = 'tab-btn' + (!isSignIn ? ' active' : '');
-      document.getElementById('signinForm').style.display = isSignIn ? 'block' : 'none';
-      document.getElementById('signupForm').style.display = isSignIn ? 'none'  : 'block';
+      const si = tab === 'signin';
+      document.getElementById('tabSignIn').className  = 'tab-btn' + (si  ? ' active' : '');
+      document.getElementById('tabSignUp').className  = 'tab-btn' + (!si ? ' active' : '');
+      document.getElementById('signinForm').style.display = si  ? 'block' : 'none';
+      document.getElementById('signupForm').style.display = si  ? 'none'  : 'block';
       clearMsgs();
     }
 
-    // ── Google OAuth ─────────────────────────────────────────────
+    // ── Google OAuth ──────────────────────────────────────────────
     function googleAuth() {
       const btn = document.getElementById('googleBtn');
       btn.disabled = true;
-      btn.textContent = 'Connecting...';
+      btn.textContent = 'Connecting…';
 
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
       auth.signInWithPopup(provider)
-        .then(function(result) {
-          saveUserToDb(result.user);
-          window.location.href = '/dashboard.html';
-        })
-        .catch(function(err) {
+        .then(r => { saveUser(r.user); window.location.href = '/dashboard.html'; })
+        .catch(err => {
           btn.disabled = false;
-          btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24"><path fill="#EA4335" d="M5.26 9.77A7.02 7.02 0 0 1 12 5c1.8 0 3.42.66 4.68 1.74L19.92 3.5A11.96 11.96 0 0 0 12 1C8.19 1 4.88 3.03 2.93 6.07l2.33 3.7z"/><path fill="#34A853" d="M12 23c3.18 0 6.03-1.05 8.04-2.85l-3.71-3.05A7.02 7.02 0 0 1 12 19a7 7 0 0 1-6.63-4.73L2.1 17.93A11.97 11.97 0 0 0 12 23z"/><path fill="#4A90D9" d="M22.84 12.22c0-.78-.07-1.53-.2-2.25H12v4.25h6.1c-.28 1.35-1.07 2.5-2.22 3.27l3.7 3.06c2.17-2 3.25-4.96 3.25-8.33z"/><path fill="#FBBC05" d="M5.37 14.27A7 7 0 0 1 5 12c0-.79.14-1.56.37-2.27L3.04 6.01A11.97 11.97 0 0 0 1 12c0 1.95.47 3.79 1.3 5.43l3.07-3.16z"/></svg> Continue with Google';
-          if (err.code !== 'auth/popup-closed-by-user') {
-            showMsg('siMsg', 'Google sign-in failed. Try again.', 'err');
-          }
+          btn.innerHTML = `<svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24"><path fill="#EA4335" d="M5.26 9.77A7.02 7.02 0 0 1 12 5c1.8 0 3.42.66 4.68 1.74L19.92 3.5A11.96 11.96 0 0 0 12 1C8.19 1 4.88 3.03 2.93 6.07l2.33 3.7z"/><path fill="#34A853" d="M12 23c3.18 0 6.03-1.05 8.04-2.85l-3.71-3.05A7.02 7.02 0 0 1 12 19a7 7 0 0 1-6.63-4.73L2.1 17.93A11.97 11.97 0 0 0 12 23z"/><path fill="#4A90D9" d="M22.84 12.22c0-.78-.07-1.53-.2-2.25H12v4.25h6.1c-.28 1.35-1.07 2.5-2.22 3.27l3.7 3.06c2.17-2 3.25-4.96 3.25-8.33z"/><path fill="#FBBC05" d="M5.37 14.27A7 7 0 0 1 5 12c0-.79.14-1.56.37-2.27L3.04 6.01A11.97 11.97 0 0 0 1 12c0 1.95.47 3.79 1.3 5.43l3.07-3.16z"/></svg> Continue with Google`;
+          if (err.code !== 'auth/popup-closed-by-user') showMsg('siMsg', 'Google sign-in failed. Try again.', 'err');
         });
     }
 
-    // ── Email Sign In ────────────────────────────────────────────
+    // ── Email Sign In ─────────────────────────────────────────────
     function emailSignIn() {
-      const email    = document.getElementById('siEmail').value.trim();
-      const password = document.getElementById('siPassword').value;
-      const btn      = document.getElementById('siBtn');
-
-      if (!email || !password) { showMsg('siMsg', 'Enter email and password.', 'err'); return; }
+      const email = document.getElementById('siEmail').value.trim();
+      const pass  = document.getElementById('siPassword').value;
+      const btn   = document.getElementById('siBtn');
+      if (!email || !pass) { showMsg('siMsg', 'Enter email and password.', 'err'); return; }
       btn.disabled = true; btn.textContent = 'Signing in…'; clearMsgs();
 
-      auth.signInWithEmailAndPassword(email, password)
-        .then(function(r) { saveUserToDb(r.user); window.location.href = '/dashboard.html'; })
-        .catch(function(err) {
-          const msgs = {
-            'auth/user-not-found':     'No account with this email. Sign up instead.',
-            'auth/wrong-password':     'Wrong password.',
-            'auth/invalid-credential': 'Invalid email or password.',
-            'auth/invalid-email':      'Invalid email address.',
-            'auth/too-many-requests':  'Too many attempts. Try later or reset password.'
-          };
-          showMsg('siMsg', msgs[err.code] || err.message, 'err');
+      auth.signInWithEmailAndPassword(email, pass)
+        .then(r => { saveUser(r.user); window.location.href = '/dashboard.html'; })
+        .catch(err => {
+          const m = { 'auth/user-not-found':'No account with this email. Sign up instead.', 'auth/wrong-password':'Wrong password.', 'auth/invalid-credential':'Invalid email or password.', 'auth/invalid-email':'Invalid email.', 'auth/too-many-requests':'Too many attempts. Reset your password.' };
+          showMsg('siMsg', m[err.code] || err.message, 'err');
           btn.disabled = false; btn.textContent = 'Sign In';
         });
     }
 
-    // ── Email Sign Up ────────────────────────────────────────────
+    // ── Email Sign Up ─────────────────────────────────────────────
     function emailSignUp() {
-      const name     = document.getElementById('suName').value.trim();
-      const email    = document.getElementById('suEmail').value.trim();
-      const password = document.getElementById('suPassword').value;
-      const btn      = document.getElementById('suBtn');
-
+      const name  = document.getElementById('suName').value.trim();
+      const email = document.getElementById('suEmail').value.trim();
+      const pass  = document.getElementById('suPassword').value;
+      const btn   = document.getElementById('suBtn');
       if (!name)           { showMsg('suMsg', 'Enter your name.', 'err'); return; }
       if (!email)          { showMsg('suMsg', 'Enter your email.', 'err'); return; }
-      if (password.length < 6) { showMsg('suMsg', 'Password must be at least 6 characters.', 'err'); return; }
+      if (pass.length < 6) { showMsg('suMsg', 'Password must be 6+ characters.', 'err'); return; }
       btn.disabled = true; btn.textContent = 'Creating account…'; clearMsgs();
 
-      auth.createUserWithEmailAndPassword(email, password)
-        .then(function(r) {
-          return r.user.updateProfile({ displayName: name }).then(function() {
-            saveUserToDb(r.user, name);
-            window.location.href = '/dashboard.html';
-          });
-        })
-        .catch(function(err) {
-          const msgs = {
-            'auth/email-already-in-use': 'Account exists. Sign in instead.',
-            'auth/invalid-email':        'Invalid email address.',
-            'auth/weak-password':        'Password too weak. Use 6+ characters.'
-          };
-          showMsg('suMsg', msgs[err.code] || err.message, 'err');
+      auth.createUserWithEmailAndPassword(email, pass)
+        .then(r => r.user.updateProfile({ displayName: name }).then(() => { saveUser(r.user, name); window.location.href = '/dashboard.html'; }))
+        .catch(err => {
+          const m = { 'auth/email-already-in-use':'Account exists. Sign in instead.', 'auth/invalid-email':'Invalid email.', 'auth/weak-password':'Password too weak.' };
+          showMsg('suMsg', m[err.code] || err.message, 'err');
           btn.disabled = false; btn.textContent = 'Create Account';
         });
     }
 
-    // ── Forgot Password ──────────────────────────────────────────
+    // ── Forgot Password ───────────────────────────────────────────
     function forgotPassword(e) {
       e.preventDefault();
       const email = document.getElementById('siEmail').value.trim();
       if (!email) { showMsg('siMsg', 'Enter your email above first.', 'err'); return; }
-
       auth.sendPasswordResetEmail(email)
-        .then(function() { showMsg('siMsg', 'Reset email sent! Check your inbox.', 'ok'); })
-        .catch(function(err) {
-          const msgs = {
-            'auth/user-not-found': 'No account with that email.',
-            'auth/invalid-email':  'Invalid email address.'
-          };
-          showMsg('siMsg', msgs[err.code] || 'Could not send reset email.', 'err');
+        .then(() => showMsg('siMsg', '✓ Reset email sent — check your inbox.', 'ok'))
+        .catch(err => {
+          const m = { 'auth/user-not-found':'No account with that email.', 'auth/invalid-email':'Invalid email.' };
+          showMsg('siMsg', m[err.code] || 'Could not send reset email.', 'err');
         });
     }
 
-    // ── Save user to backend DB ──────────────────────────────────
-    function saveUserToDb(user, displayName) {
-      try {
-        fetch(API + '/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            uid:   user.uid,
-            email: user.email,
-            name:  displayName || user.displayName || user.email.split('@')[0],
-            photo: user.photoURL || null,
-            provider: user.providerData[0] ? user.providerData[0].providerId : 'email'
-          })
-        }).catch(function() {}); // fire-and-forget, don't block login
-      } catch(e) {}
+    // ── Save user to DB (fire-and-forget) ─────────────────────────
+    function saveUser(user, name) {
+      fetch(API + '/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: user.uid, email: user.email, name: name || user.displayName || user.email?.split('@')[0], photo: user.photoURL, provider: user.providerData[0]?.providerId || 'email' })
+      }).catch(() => {});
     }
 
-    // ── Helpers ──────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────
     function togglePwd(inputId, iconId) {
-      const inp  = document.getElementById(inputId);
-      const icon = document.getElementById(iconId);
-      if (inp.type === 'password') { inp.type = 'text';     icon.textContent = 'visibility_off'; }
-      else                         { inp.type = 'password'; icon.textContent = 'visibility'; }
+      const inp = document.getElementById(inputId), icon = document.getElementById(iconId);
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+      icon.textContent = inp.type === 'password' ? 'visibility' : 'visibility_off';
     }
-
-    function showMsg(elId, text, type) {
-      const el = document.getElementById(elId);
-      el.className = type === 'err' ? 'err' : 'ok';
+    function showMsg(id, text, type) {
+      const el = document.getElementById(id);
+      el.className = type === 'err' ? 'err-msg' : 'ok-msg';
       el.textContent = text;
     }
+    function clearMsgs() { ['siMsg','suMsg'].forEach(id => { const el = document.getElementById(id); if(el){ el.textContent=''; el.className='err-msg'; } }); }
 
-    function clearMsgs() {
-      ['siMsg','suMsg'].forEach(function(id) {
-        const el = document.getElementById(id);
-        if (el) { el.textContent = ''; el.className = ''; }
-      });
-    }
-
-    // Enter key submits
-    document.addEventListener('keydown', function(e) {
+    // Enter key submits active form
+    document.addEventListener('keydown', e => {
       if (e.key !== 'Enter') return;
-      if (document.getElementById('signinForm').style.display !== 'none') emailSignIn();
-      else emailSignUp();
+      document.getElementById('signinForm').style.display !== 'none' ? emailSignIn() : emailSignUp();
     });
   </script>
 </body>
