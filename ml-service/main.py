@@ -10,7 +10,7 @@ from llm_handler import generate_summary
 from report_gen import generate_pdf
 import requests as req_lib
 
-app = FastAPI(title='ForensicAI ML Service', version='1.0.0')
+app = FastAPI(title='ForensicAI ML Service', version='2.0.0')
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,7 +38,7 @@ def save_temp(file: UploadFile, file_id: str):
 def health():
     ollama = False
     try:
-        r = req_lib.get('http://localhost:11434/api/tags', timeout=3)
+        r = req_lib.get('http://localhost:11434/api/tags', timeout=1)
         ollama = r.status_code == 200
     except:
         pass
