@@ -99,6 +99,10 @@
     .fade-in-delay-2 { animation-delay: 0.4s; opacity: 0; }
     .fade-in-delay-3 { animation-delay: 0.6s; opacity: 0; }
   </style>
+  <!-- Firebase + config -->
+  <script src="/config.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 <body class="bg-background-dark font-display text-slate-100">
   <!-- Three.js Background -->
@@ -405,27 +409,52 @@
       }
     }
 
-    // Form submission
+    // Init Firebase
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+
+    // If already logged in → skip login screen
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (user) window.location.replace('/dashboard.html');
+    });
+
+    // Real Firebase login
     document.getElementById('loginForm').addEventListener('submit', function(e) {
       e.preventDefault();
-      
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
 
-      // Simulate login
-      console.log('Login attempt:', { email, password });
-      
-      // Show loading state
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
       const submitBtn = e.target.querySelector('button[type="submit"]');
-      const originalText = submitBtn.textContent;
+
+      // Clear previous error
+      const prevErr = document.getElementById('loginError');
+      if (prevErr) prevErr.remove();
+
       submitBtn.textContent = 'Signing in...';
       submitBtn.disabled = true;
 
-      // Simulate API call
-      setTimeout(() => {
-        alert('Login successful! Redirecting to dashboard...');
-        window.location.href = 'dashboard.html';
-      }, 1500);
+      firebase.auth().signInWithEmailAndPassword(email, password)
+        .then(function() {
+          window.location.href = '/dashboard.html';
+        })
+        .catch(function(err) {
+          const msgs = {
+            'auth/user-not-found':    'No account found with this email.',
+            'auth/wrong-password':    'Incorrect password.',
+            'auth/invalid-email':     'Invalid email address.',
+            'auth/too-many-requests': 'Too many attempts. Try again later.',
+            'auth/invalid-credential':'Invalid email or password.'
+          };
+          const msg = msgs[err.code] || 'Login failed. Check your credentials.';
+
+          const errEl = document.createElement('p');
+          errEl.id = 'loginError';
+          errEl.className = 'text-red-400 text-sm text-center mt-2';
+          errEl.textContent = msg;
+          submitBtn.parentNode.appendChild(errEl);
+
+          submitBtn.textContent = 'Sign In';
+          submitBtn.disabled = false;
+        });
     });
 
     // Initialize Three.js when DOM is ready
