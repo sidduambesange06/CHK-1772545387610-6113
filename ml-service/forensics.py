@@ -701,22 +701,23 @@ def run_deepfake_model(image_path):
 
     max_s = max(scores)
     avg_s = sum(scores) / len(scores)
+    disagreement = max(scores) - min(scores)
 
-    # If BOTH models are confident (>60%) → use max (unanimous strong signal)
-    if all(s > 60 for s in scores):
+    # If models disagree strongly (>35 pts apart), trust the average —
+    # one model may not be suited for this image type (e.g. face model on landscape)
+    if disagreement > 35:
+        result = round(avg_s, 2)
+    # Both models confidently agree it's fake
+    elif all(s > 65 for s in scores):
         result = round(max_s, 2)
-    # If ONE model is confident (>60%) → weight heavily toward that model
-    # Rationale: one specialized detector finding AI is meaningful even if other is uncertain
-    elif max_s >= 60:
-        result = round(max_s * 0.72 + avg_s * 0.28, 2)
-    # If one model is suspicious (>=45%) → lean toward that signal
-    elif max_s >= 45:
-        result = round(max_s * 0.62 + avg_s * 0.38, 2)
+    # Both models moderately agree
+    elif all(s > 45 for s in scores):
+        result = round(avg_s * 0.7 + max_s * 0.3, 2)
     else:
-        # Both lean real → use average (reduces false positives)
+        # Models lean real or uncertain → use average (reduces false positives)
         result = round(avg_s, 2)
 
-    print(f'[model:ensemble] scores={scores} max={max_s:.1f} avg={avg_s:.1f} result={result}')
+    print(f'[model:ensemble] scores={scores} max={max_s:.1f} avg={avg_s:.1f} disagree={disagreement:.1f} result={result}')
     return result, models_used
 
 
@@ -845,15 +846,18 @@ def analyze_image(image_path):
         final = model_score * 0.65 + forensic_avg * 0.30 + exif_score * 0.05
         final = min(final, 35)
 
+    elif model_score < 55 and forensic_avg < 35:
+        # Model uncertain + mild forensics → lean authentic, cap at SUSPICIOUS range
+        final = model_score * 0.65 + forensic_avg * 0.30 + exif_score * 0.05
+        final = min(final, 50)
+
     else:
         # Default path: neural model leads (65% weight)
-        # Covers: suspicious (40-70), confident (70-80), very confident (80+)
+        # Requires model_score >= 55 OR forensic_avg >= 35 to reach MANIPULATED
         final = model_score * 0.65 + forensic_avg * 0.30 + exif_score * 0.05
 
-        # Forensic boost: if BOTH model AND forensics strongly agree → amplify
-        if model_score >= 75 and strong_forensic >= 2:
-            final = min(final + 10, 100)
-        elif model_score >= 65 and strong_forensic >= 3:
+        # Forensic boost: ONLY when model is already confident (reduces false positives)
+        if model_score >= 78 and strong_forensic >= 3:
             final = min(final + 8, 100)
 
         # Camera EXIF protection: valid camera metadata dampens the verdict
@@ -871,9 +875,9 @@ def analyze_image(image_path):
     final = round(min(100, max(0, final)), 2)
 
     # ── VERDICT ────────────────────────────────────────────────────
-    if final >= 60:
+    if final >= 68:
         label = 'MANIPULATED'
-    elif final >= 38:
+    elif final >= 45:
         label = 'SUSPICIOUS'
     else:
         label = 'AUTHENTIC'
