@@ -1,23 +1,18 @@
 // ============ STATE ============
 const state = {
-    files: [],
-    results: [],
-    isAnalyzing: false,
-    history: [],
-    currentTab: 'dashboard'
+    isAnalyzing: false
 };
 
 // ============ DOM ELEMENTS ============
-const uploadZone = document.getElementById('uploadZone');
-const fileInput = document.getElementById('fileInput');
-const browseBtn = document.getElementById('browseBtn');
+const uploadZone   = document.getElementById('uploadZone');
+const fileInput    = document.getElementById('fileInput');
+const browseBtn    = document.getElementById('browseBtn');
 const resultsContainer = document.getElementById('resultsContainer');
 
 // ============ INITIALIZATION ============
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
-    loadHistory();
-    displayResults(); // Initialize with empty state
+    showIdle();
 });
 
 // ============ EVENT LISTENERS ============
@@ -33,265 +28,183 @@ function setupEventListeners() {
 // ============ DRAG & DROP ============
 function handleDragOver(e) {
     e.preventDefault();
-    uploadZone.classList.add('border-primary');
+    uploadZone.classList.add('border-primary', 'bg-primary/5');
 }
 
 function handleDragLeave(e) {
     e.preventDefault();
-    uploadZone.classList.remove('border-primary');
+    uploadZone.classList.remove('border-primary', 'bg-primary/5');
 }
 
 function handleDrop(e) {
     e.preventDefault();
-    uploadZone.classList.remove('border-primary');
+    uploadZone.classList.remove('border-primary', 'bg-primary/5');
     const files = Array.from(e.dataTransfer.files);
-    addFiles(files);
-    handleAnalyze();
+    if (files.length > 0) analyzeFile(files[0]);
 }
 
 function handleFileSelect(e) {
     const files = Array.from(e.target.files);
-    addFiles(files);
     fileInput.value = '';
-    if (files.length > 0) {
-        handleAnalyze();
-    }
+    if (files.length > 0) analyzeFile(files[0]);
 }
 
-// ============ FILE MANAGEMENT ============
-function addFiles(files) {
-    files.forEach(file => {
-        state.files.push(file);
-    });
-}
-
-function removeFile(index) {
-    state.files.splice(index, 1);
-}
-
-// ============ ANALYSIS ============
-async function handleAnalyze() {
-    if (state.files.length === 0 || state.isAnalyzing) return;
-
-    state.isAnalyzing = true;
-
-    state.results = state.files.map(file => generateResult(file));
-
-    const caseEntry = {
-        id: generateId(),
-        timestamp: new Date().toLocaleString(),
-        files: state.files.map(f => f.name),
-        results: JSON.parse(JSON.stringify(state.results)),
-        hash: generateSHA256Mock()
-    };
-
-    state.history.unshift(caseEntry);
-    saveHistory();
-
-    displayResults();
-
-    state.isAnalyzing = false;
-    state.files = [];
-}
-
-function generateResult(file) {
-    const verdicts = [
-        { status: 'authentic', confidence: 94, finding: 'Metadata integrity verified. No tampering detected.' },
-        { status: 'authentic', confidence: 89, finding: 'Digital signature validated. Chain of custody confirmed.' },
-        { status: 'fake', confidence: 87, finding: 'ELA detected edge splicing. Deepfake indicators found.' }
-    ];
-
-    const verdict = verdicts[Math.floor(Math.random() * verdicts.length)];
-
-    return {
-        id: generateId(),
-        filename: file.name,
-        fileType: file.type,
-        status: verdict.status,
-        confidence: verdict.confidence,
-        finding: verdict.finding,
-        hash: generateSHA256Mock(),
-        timestamp: new Date().toLocaleString()
-    };
-}
-
-// ============ DISPLAY RESULTS ============
-function displayResults() {
-    const resultsHeading = document.getElementById('resultsHeading');
+// ============ IDLE STATE ============
+function showIdle() {
+    const heading   = document.getElementById('resultsHeading');
     const emptyState = document.getElementById('emptyState');
-    
-    resultsContainer.innerHTML = '';
+    if (heading)    heading.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'flex';
+    if (resultsContainer) resultsContainer.innerHTML = '';
+}
 
-    if (state.results.length === 0) {
-        // Show empty state
-        if (resultsHeading) resultsHeading.style.display = 'none';
-        if (emptyState) emptyState.style.display = 'flex';
-        return;
-    }
-
-    // Hide empty state and show heading
-    if (resultsHeading) resultsHeading.style.display = 'block';
+// ============ SHOW STATUS IN RIGHT PANEL ============
+function showStatus(icon, title, message, color = 'primary') {
+    const heading = document.getElementById('resultsHeading');
+    if (heading) heading.style.display = 'none';
+    const emptyState = document.getElementById('emptyState');
     if (emptyState) emptyState.style.display = 'none';
 
-    state.results.forEach((result, index) => {
-        const card = createEvidenceCard(result, index);
-        resultsContainer.appendChild(card);
-    });
+    const colorMap = {
+        primary: 'text-primary bg-primary/10',
+        red:     'text-red-500 bg-red-500/10',
+        green:   'text-emerald-500 bg-emerald-500/10',
+        amber:   'text-amber-500 bg-amber-500/10'
+    };
+    resultsContainer.innerHTML = `
+        <div class="flex flex-col items-center justify-center p-8 text-center gap-4">
+            <div class="w-16 h-16 rounded-full ${colorMap[color]} flex items-center justify-center">
+                <span class="material-symbols-outlined text-3xl">${icon}</span>
+            </div>
+            <div>
+                <p class="text-sm font-bold text-slate-700 dark:text-slate-300">${title}</p>
+                <p class="text-xs text-slate-500 mt-1">${message}</p>
+            </div>
+        </div>`;
 }
 
-function createEvidenceCard(result, index) {
-    const card = document.createElement('div');
-    
-    const statusClass = result.status === 'authentic' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/30 bg-red-500/5';
-    const statusColor = result.status === 'authentic' ? 'emerald' : 'red';
-    const statusIcon = result.status === 'authentic' ? 'verified' : 'face_retouching_off';
-    const statusText = result.status === 'authentic' ? 'PASSED' : 'CRITICAL';
-    const verdictText = result.status === 'authentic' ? 'Authentic' : 'AI-Generated';
+// ============ SHOW PROGRESS BAR ============
+function showProgress(pct, label) {
+    const heading = document.getElementById('resultsHeading');
+    if (heading) heading.style.display = 'none';
+    const emptyState = document.getElementById('emptyState');
+    if (emptyState) emptyState.style.display = 'none';
 
-    card.className = `p-5 rounded-xl border ${statusClass} shadow-sm relative overflow-hidden group`;
-    
-    card.innerHTML = `
-        <div class="flex items-center justify-between mb-3">
-            <span class="material-symbols-outlined text-${statusColor}-500">${statusIcon}</span>
-            <span class="text-xs font-black text-${statusColor}-500">${statusText}</span>
-        </div>
-        <p class="text-slate-500 dark:text-slate-400 text-xs font-medium mb-1">${result.filename}</p>
-        <p class="text-2xl font-bold text-${statusColor}-500">${result.confidence}% ${verdictText}</p>
-        <p class="mt-3 text-[10px] text-slate-500 leading-relaxed italic">${result.finding}</p>
-    `;
-
-    return card;
+    resultsContainer.innerHTML = `
+        <div class="p-6 flex flex-col gap-4">
+            <div class="flex items-center gap-3">
+                <div class="animate-spin"><span class="material-symbols-outlined text-primary text-2xl">autorenew</span></div>
+                <p class="text-sm font-bold text-slate-700 dark:text-slate-300">Analyzing...</p>
+            </div>
+            <div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div class="h-full bg-primary rounded-full transition-all duration-500" style="width:${pct}%"></div>
+            </div>
+            <p class="text-xs text-slate-500">${label}</p>
+        </div>`;
 }
 
-// ============ RE-ANALYZE ============
-function reanalyzeFile(id) {
-    const result = state.results.find(r => r.id === id);
-    if (result) {
-        result.status = result.status === 'authentic' ? 'fake' : 'authentic';
-        result.confidence = Math.floor(Math.random() * 20) + 80;
-        displayResults();
-    }
-}
+// ============ CORE ANALYZE FLOW ============
+async function analyzeFile(file) {
+    if (state.isAnalyzing) return;
+    state.isAnalyzing = true;
 
-// ============ RESET ANALYSIS ============
-function resetAnalysis() {
-    state.files = [];
-    state.results = [];
-    displayResults(); // This will show the empty state
-}
+    // detect type
+    const name = file.name.toLowerCase();
+    const imgExts = ['jpg','jpeg','png','gif','webp'];
+    const vidExts = ['mp4','avi','mov','mkv'];
+    const audExts = ['mp3','wav','ogg','flac'];
+    const ext = name.split('.').pop();
+    const isImage = imgExts.includes(ext);
+    const isVideo = vidExts.includes(ext);
+    const isAudio = audExts.includes(ext);
 
-// ============ HISTORY ============
-function saveHistory() {
-    localStorage.setItem('forensics_history', JSON.stringify(state.history.slice(0, 10)));
-}
-
-function loadHistory() {
-    const saved = localStorage.getItem('forensics_history');
-    if (saved) {
-        state.history = JSON.parse(saved);
-    }
-}
-
-function updateHistoryDisplay() {
-    // History display removed - dashboard is single page
-}
-
-// ============ PDF DOWNLOAD ============
-function downloadReport() {
-    if (state.results.length === 0) {
-        alert('No analysis results to download');
+    if (!isImage && !isVideo && !isAudio) {
+        showStatus('error', 'Unsupported File', 'Please upload an image, video, or audio file.', 'red');
+        state.isAnalyzing = false;
         return;
     }
 
-    const reportHTML = generateReportHTML();
+    try {
+        // ── STEP 1: Upload ──
+        showProgress(15, 'Uploading file to server...');
 
-    const element = document.createElement('div');
-    element.innerHTML = reportHTML;
-    element.style.display = 'none';
-    document.body.appendChild(element);
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const uid  = user.uid || window.currentUser?.uid || 'anonymous';
 
-    // Note: jsPDF library not included in this version
-    // For production, add: <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    alert('Report generation requires jsPDF library. Download feature coming soon.');
-    document.body.removeChild(element);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('uid', uid);
+
+        const uploadRes = await fetch(API + '/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!uploadRes.ok) {
+            const err = await uploadRes.json().catch(() => ({}));
+            throw new Error(err.error || 'Upload failed (' + uploadRes.status + ')');
+        }
+
+        const uploadData = await uploadRes.json();
+        const { fileId, filename, path: filePath, originalName, fileHash } = uploadData;
+
+        // ── STEP 2: Analyze ──
+        showProgress(40, isImage ? 'Running neural fingerprint analysis...' : isVideo ? 'Extracting & scanning frames...' : 'Analyzing audio patterns...');
+
+        const endpoint = isImage ? '/analyze' : isVideo ? '/analyze-video' : '/analyze-audio';
+
+        const analyzeRes = await fetch(API + endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filePath, fileId, filename })
+        });
+
+        if (!analyzeRes.ok) {
+            const err = await analyzeRes.json().catch(() => ({}));
+            throw new Error(err.error || 'Analysis failed (' + analyzeRes.status + ')');
+        }
+
+        showProgress(85, 'Processing results...');
+
+        const result = await analyzeRes.json();
+
+        // attach metadata results.html needs
+        result.originalName = originalName || file.name;
+        result.fileId       = result.fileId || fileId;
+        result.filePath     = filePath;
+        result.mediaType    = isImage ? 'image' : isVideo ? 'video' : 'audio';
+        if (!result.fileHash) result.fileHash = fileHash;
+
+        showProgress(100, 'Done!');
+
+        // ── STEP 3: Save + redirect to results.html ──
+        sessionStorage.setItem('scanResult', JSON.stringify(result));
+
+        // add to local history
+        const history = JSON.parse(localStorage.getItem('forensics_history') || '[]');
+        history.unshift({
+            id: fileId,
+            filename: originalName || file.name,
+            timestamp: new Date().toLocaleString(),
+            verdict: result.label,
+            confidence: result.confidence || result.score || 0,
+            type: result.mediaType
+        });
+        localStorage.setItem('forensics_history', JSON.stringify(history.slice(0, 20)));
+
+        // brief pause so user sees 100%
+        setTimeout(() => {
+            window.location.href = 'results.html';
+        }, 400);
+
+    } catch (err) {
+        console.error('[analyze] error:', err);
+        showStatus('error', 'Analysis Failed', err.message || 'Something went wrong. Check that all services are running.', 'red');
+        state.isAnalyzing = false;
+    }
 }
 
-function generateReportHTML() {
-    const timestamp = new Date().toLocaleString();
-    const authenticCount = state.results.filter(r => r.status === 'authentic').length;
-    const fakeCount = state.results.filter(r => r.status === 'fake').length;
-    const avgConfidence = Math.round(
-        state.results.reduce((a, b) => a + b.confidence, 0) / state.results.length
-    );
-
-    let resultsHTML = '';
-    state.results.forEach((result, index) => {
-        const statusColor = result.status === 'authentic' ? '#10B981' : '#EF4444';
-        resultsHTML += `
-            <div style="margin-bottom: 20px; padding: 15px; border-left: 4px solid ${statusColor}; background: #f5f5f5;">
-                <h4 style="margin: 0 0 10px 0; color: #333;">${index + 1}. ${result.filename}</h4>
-                <p style="margin: 5px 0; color: #666;"><strong>Status:</strong> ${result.status.toUpperCase()}</p>
-                <p style="margin: 5px 0; color: #666;"><strong>Confidence:</strong> ${result.confidence}%</p>
-                <p style="margin: 5px 0; color: #666;"><strong>Hash:</strong> ${result.hash}</p>
-                <p style="margin: 5px 0; color: #666;"><strong>Finding:</strong> ${result.finding}</p>
-            </div>
-        `;
-    });
-
-    return `
-        <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
-            <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #D4AF37; padding-bottom: 20px;">
-                <h1 style="margin: 0; color: #1E3A8A;">🔍 AI FORENSICS ENGINE</h1>
-                <h2 style="margin: 10px 0 0 0; color: #666; font-size: 18px;">FORENSIC ANALYSIS REPORT</h2>
-                <p style="margin: 10px 0 0 0; color: #999; font-size: 12px;">IT ACT 65B COMPLIANT | CHAIN OF CUSTODY VERIFIED</p>
-            </div>
-
-            <div style="margin-bottom: 20px;">
-                <p><strong>Report Generated:</strong> ${timestamp}</p>
-                <p><strong>Analysis Engine:</strong> Chakravyuh 2.0 AI Forensics</p>
-                <p><strong>Compliance:</strong> Indian IT Act Section 65B</p>
-            </div>
-
-            <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-                <h3 style="margin-top: 0; color: #1E3A8A;">EXECUTIVE SUMMARY</h3>
-                <p><strong>Total Files Analyzed:</strong> ${state.results.length}</p>
-                <p><strong>Authentic Files:</strong> ${authenticCount}</p>
-                <p><strong>Deepfake Detected:</strong> ${fakeCount}</p>
-                <p><strong>Average Confidence:</strong> ${avgConfidence}%</p>
-            </div>
-
-            <h3 style="color: #1E3A8A; margin-top: 30px;">DETAILED FINDINGS</h3>
-            ${resultsHTML}
-
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #999;">
-                <p><strong>CHAIN OF CUSTODY:</strong></p>
-                <p>User: Team1 | Time: 8:56 PM Mar 6 | Transfers: 3</p>
-                <p style="margin-top: 15px;"><strong>LEGAL CERTIFICATION:</strong></p>
-                <p>This report is generated using AI-powered forensic analysis tools compliant with Indian IT Act Section 65B.</p>
-                <p style="margin-top: 15px; text-align: center;">Generated by Chakravyuh 2.0 AI Forensics Engine | Status: COURT ADMISSIBLE</p>
-            </div>
-        </div>
-    `;
-}
-
-// ============ UTILITY FUNCTIONS ============
-function getFileIcon(mimeType) {
-    if (!mimeType) return '📄';
-    if (mimeType.startsWith('image/')) return '📷';
-    if (mimeType.startsWith('video/')) return '🎬';
-    if (mimeType.startsWith('audio/')) return '🎵';
-    if (mimeType.includes('pdf')) return '📕';
-    return '📄';
-}
-
-function generateSHA256Mock() {
-    return 'a1b2c3d4e5f6' + Math.random().toString(36).substr(2, 20);
-}
-
+// ============ UTILITY ============
 function generateId() {
     return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-}
-
-function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
 }
