@@ -121,10 +121,6 @@
       scroll-behavior: smooth;
     }
   </style>
-  <script src="/config.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="/auth-guard.js"></script>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
   <div class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden">
@@ -154,7 +150,6 @@
           <!-- Navigation -->
           <nav class="flex items-center gap-3 sm:gap-4 lg:gap-8 overflow-x-auto pb-1 lg:pb-0 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:mx-0 lg:px-0 scrollbar-hide">
             <a class="text-primary text-xs sm:text-sm font-semibold whitespace-nowrap" href="index.html">Dashboard</a>
-            <a class="text-slate-600 dark:text-slate-400 hover:text-primary text-xs sm:text-sm font-medium whitespace-nowrap transition-colors" href="evidence.html">Evidence</a>
             <a class="text-slate-600 dark:text-slate-400 hover:text-primary text-xs sm:text-sm font-medium whitespace-nowrap transition-colors" href="dashboard.html">Analysis</a>
             <a class="text-slate-600 dark:text-slate-400 hover:text-primary text-xs sm:text-sm font-medium whitespace-nowrap transition-colors" href="reports.html">Reports</a>
             <a class="text-slate-600 dark:text-slate-400 hover:text-primary text-xs sm:text-sm font-medium whitespace-nowrap transition-colors" href="settings.html">Settings</a>
@@ -162,9 +157,6 @@
           
           <!-- Desktop Actions -->
           <div class="hidden lg:flex flex-1 justify-end gap-3 items-center">
-            <button class="flex items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-all whitespace-nowrap">
-              Upgrade Node
-            </button>
             <div class="relative">
               <button onclick="toggleSettingsMenu()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                 <span class="material-symbols-outlined text-slate-600 dark:text-slate-400 hover:text-primary">settings</span>
@@ -244,11 +236,11 @@
             </div>
           </section>
 
-          <!-- FORENSIC TOOLS SECTION -->
+          <!-- DEEPFAKE TOOLS SECTION -->
           <section class="pb-16 scroll-fade">
             <div class="flex items-end justify-between mb-8 scroll-fade">
               <div>
-                <h2 class="text-slate-900 dark:text-white text-2xl font-bold leading-tight tracking-tight">Forensic Analysis Tools</h2>
+                <h2 class="text-slate-900 dark:text-white text-2xl font-bold leading-tight tracking-tight">Deepfake Analysis Tools</h2>
                 <p class="text-slate-500 text-sm mt-1">Specialized detection suites for multi-modal evidence</p>
               </div>
               <a class="text-primary text-sm font-bold flex items-center gap-1 hover:underline" href="#">
@@ -303,7 +295,7 @@
 
               <!-- Card 3: Voice Clone -->
               <div class="group flex flex-col gap-4 p-5 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 hover:border-primary/50 transition-all shadow-sm scroll-fade">
-                <div class="w-full aspect-square bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-xl overflow-hidden relative" data-alt="Sound wave frequency forensic visualization">
+                <div class="w-full aspect-square bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-xl overflow-hidden relative" data-alt="Sound wave frequency deepfake visualization">
                   <div class="absolute inset-0 flex items-center justify-center">
                     <svg class="w-32 h-32 text-primary group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
@@ -340,9 +332,9 @@
               <div class="flex flex-col gap-2 rounded-2xl p-6 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm scroll-scale">
                 <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Detection Accuracy</p>
                 <div class="flex items-baseline gap-2">
-                  <p class="text-slate-900 dark:text-white text-3xl font-black">99.9%</p>
+                  <p class="text-slate-900 dark:text-white text-3xl font-black">80%</p>
                   <p class="text-emerald-500 text-sm font-bold flex items-center">
-                    <span class="material-symbols-outlined text-sm">trending_up</span> 0.2%
+                    <span class="material-symbols-outlined text-sm">trending_up</span> 2%
                   </p>
                 </div>
               </div>
@@ -370,10 +362,10 @@
           <!-- NEW: FEATURES SECTION -->
           <section class="pb-20 scroll-fade">
             <div class="text-center mb-12 scroll-fade">
-              <h2 class="text-slate-900 dark:text-white text-4xl font-black mb-4">Why Choose AI Forensics?</h2>
-              <p class="text-slate-500 text-lg max-w-2xl mx-auto">Industry-leading technology trusted by forensic experts worldwide</p>
+              <h2 class="text-slate-900 dark:text-white text-4xl font-black mb-4">Why Choose Deepfake AI?</h2>
+              <p class="text-slate-500 text-lg max-w-2xl mx-auto">Industry-leading technology trusted by deepfake detection experts worldwide</p>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
               <div class="scroll-fade p-8 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-slate-200 dark:border-slate-800">
                 <div class="w-16 h-16 rounded-xl bg-primary/20 flex items-center justify-center mb-6">
                   <span class="material-symbols-outlined text-primary text-4xl">speed</span>
@@ -381,21 +373,13 @@
                 <h3 class="text-slate-900 dark:text-white text-xl font-bold mb-3">Lightning Fast</h3>
                 <p class="text-slate-500 leading-relaxed">Process evidence in under 30 seconds with our optimized AI models and distributed computing infrastructure.</p>
               </div>
-              
+
               <div class="scroll-fade p-8 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-slate-200 dark:border-slate-800">
                 <div class="w-16 h-16 rounded-xl bg-emerald-500/20 flex items-center justify-center mb-6">
                   <span class="material-symbols-outlined text-emerald-500 text-4xl">verified_user</span>
                 </div>
-                <h3 class="text-slate-900 dark:text-white text-xl font-bold mb-3">99.9% Accuracy</h3>
-                <p class="text-slate-500 leading-relaxed">State-of-the-art deep learning models trained on millions of samples for unmatched detection accuracy.</p>
-              </div>
-              
-              <div class="scroll-fade p-8 rounded-2xl bg-gradient-to-br from-amber-500/10 to-transparent border border-slate-200 dark:border-slate-800">
-                <div class="w-16 h-16 rounded-xl bg-amber-500/20 flex items-center justify-center mb-6">
-                  <span class="material-symbols-outlined text-amber-500 text-4xl">security</span>
-                </div>
-                <h3 class="text-slate-900 dark:text-white text-xl font-bold mb-3">Bank-Grade Security</h3>
-                <p class="text-slate-500 leading-relaxed">AES-256 encryption, zero-knowledge architecture, and compliance with international security standards.</p>
+                <h3 class="text-slate-900 dark:text-white text-xl font-bold mb-3">80% Accuracy</h3>
+                <p class="text-slate-500 leading-relaxed">Deep learning models trained on millions of samples with multi-engine cross-examination for reliable detection.</p>
               </div>
             </div>
 
@@ -414,14 +398,14 @@
         <div class="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div class="flex items-center gap-3 text-slate-400">
             <span class="material-symbols-outlined">fingerprint</span>
-            <span class="text-sm font-bold tracking-tight">AI FORENSICS ENGINE v2.4.0</span>
+            <span class="text-sm font-bold tracking-tight">DEEPFAKE AI ENGINE v2.4.0</span>
           </div>
           <div class="flex gap-8">
             <a class="text-xs font-medium text-slate-500 hover:text-primary" href="#">Legal Compliance</a>
             <a class="text-xs font-medium text-slate-500 hover:text-primary" href="#">Data Protection</a>
             <a class="text-xs font-medium text-slate-500 hover:text-primary" href="#">API Documentation</a>
           </div>
-          <p class="text-xs text-slate-600">© 2024 AI Forensics Lab. Secure Evidence Verification.</p>
+          <p class="text-xs text-slate-600">© 2024 Deepfake AI Lab. Secure Evidence Verification.</p>
         </div>
       </footer>
     </div>
@@ -437,8 +421,8 @@
             <span class="material-symbols-outlined text-primary text-2xl">science</span>
           </div>
           <div>
-            <h3 class="text-2xl font-black text-slate-900 dark:text-white">AI Forensics Sandbox</h3>
-            <p class="text-xs text-slate-500">Test and experiment with forensic analysis tools</p>
+            <h3 class="text-2xl font-black text-slate-900 dark:text-white">Deepfake AI Sandbox</h3>
+            <p class="text-xs text-slate-500">Test and experiment with deepfake analysis tools</p>
           </div>
         </div>
         <button onclick="closeSandbox()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
@@ -464,16 +448,16 @@
             </div>
           </div>
 
-          <!-- Tool 2: Video Forensics -->
+          <!-- Tool 2: Video Deepfake -->
           <div class="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 hover:border-primary/50 transition-all cursor-pointer group">
             <div class="flex items-start gap-4">
               <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <span class="material-symbols-outlined text-primary text-2xl">videocam</span>
               </div>
               <div class="flex-1">
-                <h4 class="text-lg font-bold text-slate-900 dark:text-white mb-1">Video Forensics</h4>
+                <h4 class="text-lg font-bold text-slate-900 dark:text-white mb-1">Video Deepfake</h4>
                 <p class="text-xs text-slate-500 mb-3">Analyze video files for frame manipulation and synthetic content</p>
-                <button onclick="alert('Video Forensics Sandbox - Test video analysis for deepfakes, frame consistency, and temporal artifacts.')" class="text-xs font-bold text-primary hover:underline">Launch Tool →</button>
+                <button onclick="alert('Video Deepfake Sandbox - Test video analysis for deepfakes, frame consistency, and temporal artifacts.')" class="text-xs font-bold text-primary hover:underline">Launch Tool →</button>
               </div>
             </div>
           </div>
@@ -597,11 +581,9 @@
     function handleLogout(event) {
       event.preventDefault();
       if (confirm('Are you sure you want to log out?')) {
-        // Clear any session data here
+        localStorage.removeItem('user');
         localStorage.removeItem('userSession');
         sessionStorage.clear();
-        
-        // Redirect to login page
         window.location.href = 'login.html';
       }
     }
@@ -942,6 +924,20 @@
         closeSandbox();
       }
     });
+  </script>
+
+  <!-- Shared config for auth + backend -->
+  <script src="config.js"></script>
+  <script>
+    // Show user info if logged in
+    const _user = JSON.parse(localStorage.getItem('user') || 'null');
+    if (_user && _user.uid) {
+      // User is logged in - could update profile button
+      const profileBtns = document.querySelectorAll('button[onclick*="Profile menu"]');
+      profileBtns.forEach(btn => {
+        btn.onclick = () => { window.location.href = 'dashboard.html'; };
+      });
+    }
   </script>
 </body>
 </html>
