@@ -37,6 +37,19 @@ router.post('/verify-token', async (req, res) => {
   }
 })
 
+// Register / upsert user from frontend after Firebase auth (fire-and-forget)
+router.post('/register', async (req, res) => {
+  const { uid, email, name, photo, provider } = req.body
+  if (!uid) return res.status(400).json({ error: 'uid required' })
+  try {
+    await db.upsertUser({ uid, email, name: name || email?.split('@')[0] || 'User', picture: photo, provider: provider || 'email' })
+    res.json({ success: true })
+  } catch (e) {
+    // non-critical — don't fail login if db write fails
+    res.json({ success: false, error: e.message })
+  }
+})
+
 // get user's past cases from Supabase
 router.get('/cases', async (req, res) => {
   const { uid, limit = 20 } = req.query
