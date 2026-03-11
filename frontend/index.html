@@ -360,12 +360,14 @@
             </div>
           </section>
           <script>
-            (async function loadStats() {
+            // Runs after config.js loads (deferred to DOMContentLoaded)
+            document.addEventListener('DOMContentLoaded', async function() {
               let s = { totalCases: 0, manipulated: 0, analyzedCount: 0, avgProcessing: 0 }
 
               // Try API first
               try {
-                const r = await fetch(BACKEND + '/api/stats')
+                const base = (typeof BACKEND !== 'undefined') ? BACKEND : 'http://localhost:3000'
+                const r = await fetch(base + '/api/stats')
                 if (r.ok) s = await r.json()
               } catch(e) { /* api down */ }
 
@@ -383,7 +385,7 @@
               const rate = s.analyzedCount > 0 ? Math.round((s.manipulated / s.analyzedCount) * 100) : 0
               document.getElementById('statDetectRate').innerHTML = '<span class="material-symbols-outlined text-sm">shield</span> ' + rate + '% flagged'
               document.getElementById('statProcessing').textContent = s.avgProcessing > 0 ? s.avgProcessing + 's' : '< 30s'
-            })()
+            })
           </script>
 
           <!-- NEW: FEATURES SECTION -->
