@@ -170,31 +170,11 @@
             <div class="mt-2 p-2 bg-slate-100 dark:bg-slate-800 rounded text-[10px] font-mono break-all text-slate-500">SHA-256: 8e34...4f12</div>
           </div>
 
-          <!-- Processing Queue Card -->
+          <!-- Recent History Card -->
           <div class="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-sm scroll-scale">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Processing Queue</h3>
-            <div class="space-y-4">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
-                  <span class="material-symbols-outlined text-primary text-sm">video_file</span>
-                </div>
-                <div class="flex-1">
-                  <p class="text-xs font-bold truncate">Case_042_Video.mp4</p>
-                  <div class="h-1 bg-slate-100 dark:bg-slate-800 rounded-full mt-1">
-                    <div class="h-full bg-primary w-2/3"></div>
-                  </div>
-                </div>
-                <span class="text-[10px] font-bold text-slate-400">67%</span>
-              </div>
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                  <span class="material-symbols-outlined text-slate-400 text-sm">audio_file</span>
-                </div>
-                <div class="flex-1">
-                  <p class="text-xs font-bold truncate">Interview_A_Rec.wav</p>
-                  <p class="text-[10px] text-slate-400">Waiting in queue...</p>
-                </div>
-              </div>
+            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Recent Analyses</h3>
+            <div id="recentHistory" class="space-y-4">
+              <p class="text-xs text-slate-500 text-center py-4">No analyses yet</p>
             </div>
           </div>
         </aside>
@@ -308,6 +288,61 @@
 
   <!-- Load app.js (wired to real backend) -->
   <script src="app.js"></script>
+
+  <!-- Recent history loader -->
+  <script>
+    (async function loadRecentHistory() {
+      const el = document.getElementById('recentHistory');
+      let cases = [];
+
+      // Try API first
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const uid = user.uid || 'anonymous';
+        const r = await fetch(API + '/cases?uid=' + encodeURIComponent(uid) + '&limit=5');
+        if (r.ok) {
+          const d = await r.json();
+          cases = d.cases || [];
+        }
+      } catch(e) {}
+
+      // Merge localStorage
+      const local = JSON.parse(localStorage.getItem('forensics_history') || '[]').slice(0, 5);
+      if (cases.length === 0) {
+        cases = local.map(h => ({
+          filename: h.filename || 'Unknown',
+          verdict: h.verdict || 'PENDING',
+          confidence: h.confidence || 0,
+          created_at: h.timestamp || new Date().toISOString()
+        }));
+      }
+
+      if (!cases.length) return;
+
+      const imgExts = ['jpg','jpeg','png','gif','webp'];
+      const vidExts = ['mp4','avi','mov','mkv'];
+
+      el.innerHTML = cases.slice(0, 5).map(c => {
+        const name = (c.filename || c.original_name || 'File').split('/').pop();
+        const ext = name.split('.').pop().toLowerCase();
+        const icon = imgExts.includes(ext) ? 'image' : vidExts.includes(ext) ? 'movie' : 'mic';
+        const v = (c.verdict || 'PENDING').toUpperCase();
+        const isFake = ['MANIPULATED','FAKE','DEEPFAKE'].includes(v);
+        const isAuth = ['AUTHENTIC','REAL'].includes(v);
+        const color = isAuth ? 'emerald' : isFake ? 'red' : 'amber';
+        const conf = parseFloat(c.confidence) || 0;
+        return `<div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded bg-${color}-500/10 flex items-center justify-center">
+            <span class="material-symbols-outlined text-${color}-500 text-sm">${icon}</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-bold truncate">${name}</p>
+            <p class="text-[10px] text-${color}-500 font-semibold">${v} · ${conf}%</p>
+          </div>
+        </div>`;
+      }).join('');
+    })();
+  </script>
 
   <!-- Scroll Animation Controller -->
   <script>

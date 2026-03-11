@@ -133,7 +133,7 @@
             <a href="index.html" class="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity cursor-pointer">
               <span class="material-symbols-outlined text-xl sm:text-2xl lg:text-3xl font-bold">fingerprint</span>
               <h2 class="text-slate-900 dark:text-white text-sm sm:text-base lg:text-xl font-black leading-tight tracking-tight">ForensicAI DeepScan</h2>
-              <span class="hidden lg:inline text-[9px] text-slate-500 font-normal ml-1 self-end mb-0.5 tracking-wide">Real-Time Digital Authenticity Verification Engine</span>
+
             </a>
             <!-- Mobile Actions -->
             <div class="flex lg:hidden gap-1.5 items-center">
@@ -149,7 +149,7 @@
           </div>
           
           <!-- Navigation -->
-          <nav class="flex items-center gap-3 sm:gap-4 lg:gap-8 overflow-x-auto pb-1 lg:pb-0 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:mx-0 lg:px-0 scrollbar-hide">
+          <nav class="flex items-center gap-3 sm:gap-4 lg:gap-8 overflow-x-auto pb-1 lg:pb-0 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:mx-0 lg:px-0 lg:flex-1 lg:justify-center scrollbar-hide">
             <a class="text-primary text-xs sm:text-sm font-semibold whitespace-nowrap" href="index.html">Dashboard</a>
             <a class="text-slate-600 dark:text-slate-400 hover:text-primary text-xs sm:text-sm font-medium whitespace-nowrap transition-colors" href="dashboard.html">Analysis</a>
             <a class="text-slate-600 dark:text-slate-400 hover:text-primary text-xs sm:text-sm font-medium whitespace-nowrap transition-colors" href="reports.html">Reports</a>
@@ -361,19 +361,28 @@
           </section>
           <script>
             (async function loadStats() {
+              let s = { totalCases: 0, manipulated: 0, analyzedCount: 0, avgProcessing: 0 }
+
+              // Try API first
               try {
                 const r = await fetch(BACKEND + '/api/stats')
-                const s = await r.json()
-                document.getElementById('statTotal').textContent = s.totalCases || '0'
-                document.getElementById('statManipulated').textContent = s.manipulated || '0'
-                const rate = s.analyzedCount > 0 ? Math.round((s.manipulated / s.analyzedCount) * 100) : 0
-                document.getElementById('statDetectRate').innerHTML = '<span class="material-symbols-outlined text-sm">shield</span> ' + rate + '% flagged'
-                document.getElementById('statProcessing').textContent = s.avgProcessing > 0 ? s.avgProcessing + 's' : '< 30s'
-              } catch(e) {
-                document.getElementById('statTotal').textContent = '0'
-                document.getElementById('statManipulated').textContent = '0'
-                document.getElementById('statProcessing').textContent = '< 30s'
+                if (r.ok) s = await r.json()
+              } catch(e) { /* api down */ }
+
+              // Merge localStorage history if API returned nothing
+              const local = JSON.parse(localStorage.getItem('forensics_history') || '[]')
+              if (s.totalCases === 0 && local.length > 0) {
+                s.totalCases = local.length
+                s.manipulated = local.filter(h => ['MANIPULATED','FAKE','DEEPFAKE'].includes((h.verdict||'').toUpperCase())).length
+                s.analyzedCount = local.length
+                s.avgProcessing = 0
               }
+
+              document.getElementById('statTotal').textContent = s.totalCases || '0'
+              document.getElementById('statManipulated').textContent = s.manipulated || '0'
+              const rate = s.analyzedCount > 0 ? Math.round((s.manipulated / s.analyzedCount) * 100) : 0
+              document.getElementById('statDetectRate').innerHTML = '<span class="material-symbols-outlined text-sm">shield</span> ' + rate + '% flagged'
+              document.getElementById('statProcessing').textContent = s.avgProcessing > 0 ? s.avgProcessing + 's' : '< 30s'
             })()
           </script>
 

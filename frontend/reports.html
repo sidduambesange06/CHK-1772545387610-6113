@@ -294,23 +294,31 @@
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const uid = user.uid || 'anonymous';
 
+      // Fetch from API
+      let dbCases = [];
       try {
         const res = await fetch(API + '/cases?uid=' + encodeURIComponent(uid) + '&limit=100');
-        if (!res.ok) throw new Error('api error');
-        const data = await res.json();
-        allCases = data.cases || data || [];
-      } catch (e) {
-        // fallback: localStorage
-        const local = JSON.parse(localStorage.getItem('forensics_history') || '[]');
-        allCases = local.map((h, i) => ({
-          id: h.id || ('local-' + i),
-          filename: h.filename || h.files?.[0] || 'Unknown',
-          created_at: h.timestamp || h.date || new Date().toISOString(),
-          verdict: h.verdict || h.status?.toUpperCase() || 'COMPLETED',
-          confidence: h.confidence || 0,
-          type: 'local'
-        }));
-      }
+        if (res.ok) {
+          const data = await res.json();
+          dbCases = data.cases || data || [];
+        }
+      } catch (e) { /* api down */ }
+
+      // Always read localStorage history too
+      const local = JSON.parse(localStorage.getItem('forensics_history') || '[]');
+      const localCases = local.map((h, i) => ({
+        id: h.id || ('local-' + i),
+        filename: h.filename || h.files?.[0] || 'Unknown',
+        created_at: h.timestamp || h.date || new Date().toISOString(),
+        verdict: h.verdict || h.status?.toUpperCase() || 'COMPLETED',
+        confidence: h.confidence || 0,
+        type: h.type || 'local'
+      }));
+
+      // Merge: DB cases take priority, add local ones not already in DB
+      const dbIds = new Set(dbCases.map(c => c.id));
+      const merged = [...dbCases, ...localCases.filter(c => !dbIds.has(c.id))];
+      allCases = merged;
 
       renderMetrics();
       renderTable();
