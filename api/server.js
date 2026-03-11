@@ -48,6 +48,42 @@ app.get('/api/health', async (req, res) => {
   })
 })
 
+// real-time platform stats from Supabase
+app.get('/api/stats', async (req, res) => {
+  const sb = supabase.getClient()
+  if (!sb) return res.json({ totalCases: 0, manipulated: 0, authentic: 0, suspicious: 0, avgConfidence: 0, avgProcessing: 0, totalSize: 0 })
+
+  try {
+    const { data: cases, error } = await sb
+      .from('cases')
+      .select('verdict, confidence, file_size, created_at, analyzed_at')
+
+    if (error || !cases) return res.json({ totalCases: 0, manipulated: 0, authentic: 0, suspicious: 0, avgConfidence: 0, avgProcessing: 0, totalSize: 0 })
+
+    const totalCases = cases.length
+    const analyzed = cases.filter(c => c.verdict)
+    const manipulated = analyzed.filter(c => c.verdict === 'MANIPULATED').length
+    const authentic = analyzed.filter(c => c.verdict === 'AUTHENTIC').length
+    const suspicious = analyzed.filter(c => c.verdict === 'SUSPICIOUS').length
+
+    const avgConfidence = analyzed.length > 0
+      ? Math.round(analyzed.reduce((s, c) => s + (c.confidence || 0), 0) / analyzed.length)
+      : 0
+
+    // avg processing time in seconds
+    const withTimes = analyzed.filter(c => c.created_at && c.analyzed_at)
+    const avgProcessing = withTimes.length > 0
+      ? Math.round(withTimes.reduce((s, c) => s + (new Date(c.analyzed_at) - new Date(c.created_at)) / 1000, 0) / withTimes.length)
+      : 0
+
+    const totalSize = cases.reduce((s, c) => s + (c.file_size || 0), 0)
+
+    res.json({ totalCases, manipulated, authentic, suspicious, avgConfidence, avgProcessing, totalSize, analyzedCount: analyzed.length })
+  } catch (e) {
+    res.json({ totalCases: 0, manipulated: 0, authentic: 0, suspicious: 0, avgConfidence: 0, avgProcessing: 0, totalSize: 0 })
+  }
+})
+
 // serve frontend in production (single deploy — no separate static server needed)
 const frontendPath = path.join(__dirname, '..', 'frontend')
 

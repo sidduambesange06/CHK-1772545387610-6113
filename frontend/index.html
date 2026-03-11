@@ -318,47 +318,64 @@
             </div>
           </section>
 
-          <!-- STATS SECTION -->
+          <!-- STATS SECTION — live from database -->
           <section class="pb-20 scroll-fade">
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="statsGrid">
               <div class="flex flex-col gap-2 rounded-2xl p-6 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm scroll-scale">
-                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Analyses Run</p>
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Cases Analyzed</p>
                 <div class="flex items-baseline gap-2">
-                  <p class="text-slate-900 dark:text-white text-3xl font-black">12.4k</p>
-                  <p class="text-emerald-500 text-sm font-bold flex items-center">
-                    <span class="material-symbols-outlined text-sm">trending_up</span> 12%
+                  <p class="text-slate-900 dark:text-white text-3xl font-black" id="statTotal">--</p>
+                  <p class="text-blue-500 text-sm font-bold flex items-center">
+                    <span class="material-symbols-outlined text-sm">query_stats</span> live
                   </p>
                 </div>
               </div>
               <div class="flex flex-col gap-2 rounded-2xl p-6 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm scroll-scale">
-                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Detection Accuracy</p>
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Deepfakes Caught</p>
                 <div class="flex items-baseline gap-2">
-                  <p class="text-slate-900 dark:text-white text-3xl font-black">80%</p>
-                  <p class="text-emerald-500 text-sm font-bold flex items-center">
-                    <span class="material-symbols-outlined text-sm">trending_up</span> 2%
+                  <p class="text-slate-900 dark:text-white text-3xl font-black" id="statManipulated">--</p>
+                  <p class="text-red-500 text-sm font-bold flex items-center" id="statDetectRate">
+                    <span class="material-symbols-outlined text-sm">shield</span> --%
                   </p>
                 </div>
               </div>
               <div class="flex flex-col gap-2 rounded-2xl p-6 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm scroll-scale">
-                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Evidence Verified</p>
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Forensic Engines</p>
                 <div class="flex items-baseline gap-2">
-                  <p class="text-slate-900 dark:text-white text-3xl font-black">450GB</p>
+                  <p class="text-slate-900 dark:text-white text-3xl font-black">9</p>
                   <p class="text-emerald-500 text-sm font-bold flex items-center">
-                    <span class="material-symbols-outlined text-sm">trending_up</span> 5%
+                    <span class="material-symbols-outlined text-sm">hub</span> active
                   </p>
                 </div>
               </div>
               <div class="flex flex-col gap-2 rounded-2xl p-6 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm scroll-scale">
                 <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Avg Processing</p>
                 <div class="flex items-baseline gap-2">
-                  <p class="text-slate-900 dark:text-white text-3xl font-black">&lt; 30s</p>
+                  <p class="text-slate-900 dark:text-white text-3xl font-black" id="statProcessing">--</p>
                   <p class="text-emerald-500 text-sm font-bold flex items-center">
-                    <span class="material-symbols-outlined text-sm">trending_up</span> 15%
+                    <span class="material-symbols-outlined text-sm">speed</span> real-time
                   </p>
                 </div>
               </div>
             </div>
           </section>
+          <script>
+            (async function loadStats() {
+              try {
+                const r = await fetch(BACKEND + '/api/stats')
+                const s = await r.json()
+                document.getElementById('statTotal').textContent = s.totalCases || '0'
+                document.getElementById('statManipulated').textContent = s.manipulated || '0'
+                const rate = s.analyzedCount > 0 ? Math.round((s.manipulated / s.analyzedCount) * 100) : 0
+                document.getElementById('statDetectRate').innerHTML = '<span class="material-symbols-outlined text-sm">shield</span> ' + rate + '% flagged'
+                document.getElementById('statProcessing').textContent = s.avgProcessing > 0 ? s.avgProcessing + 's' : '< 30s'
+              } catch(e) {
+                document.getElementById('statTotal').textContent = '0'
+                document.getElementById('statManipulated').textContent = '0'
+                document.getElementById('statProcessing').textContent = '< 30s'
+              }
+            })()
+          </script>
 
           <!-- NEW: FEATURES SECTION -->
           <section class="pb-20 scroll-fade">
