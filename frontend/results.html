@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeepScan - Deepfake X-Ray</title>
+    <title>ForensicAI DeepScan - Digital Authenticity Verification</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <style>
@@ -257,16 +257,14 @@
             .xray-header { flex-direction: column; gap: 10px; }
         }
     </style>
-  <script src="/config.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="/auth-guard.js"></script>
+  <script src="config.js"></script>
 </head>
 <body>
     <div class="top-nav">
         <a href="index.html" class="logo">
             <span class="material-symbols-outlined logo-icon">fingerprint</span>
-            <span>Deepfake AI</span>
+            <span>ForensicAI DeepScan</span>
+            <span style="font-size:9px;color:#64748b;font-weight:400;margin-left:4px;letter-spacing:0.5px;align-self:flex-end;margin-bottom:2px;">Real-Time Digital Authenticity Verification Engine</span>
         </a>
         <div class="nav-links">
             <a href="index.html">Dashboard</a>
@@ -289,7 +287,6 @@
         <div class="no-data" id="noData">No results yet. <a href="index.html">Upload a file</a> to analyze.</div>
     </div>
 
-    <script src="config.js"></script>
     <script>
         const raw = sessionStorage.getItem('scanResult')
 
@@ -328,19 +325,61 @@
             let html = ''
 
             // ═══ VERDICT BANNER ═══
+            const riskLevel = d.score >= 70 ? 'CRITICAL' : d.score >= 50 ? 'HIGH' : d.score >= 35 ? 'MEDIUM' : 'LOW'
+            const riskColor = d.score >= 70 ? '#ef4444' : d.score >= 50 ? '#f97316' : d.score >= 35 ? '#f59e0b' : '#22c55e'
+
             html += `
             <div class="verdict-banner ${vc} animate-in">
                 <div>
-                    <div style="font-size:11px;color:#888;letter-spacing:2px;margin-bottom:4px;">DEEPFAKE VERDICT</div>
+                    <div style="font-size:11px;color:#888;letter-spacing:2px;margin-bottom:4px;">AUTHENTICITY ASSESSMENT</div>
                     <div class="verdict-label">${d.label}</div>
                     <div class="verdict-sub">${media.toUpperCase()} Analysis &middot; ${d.confidence?.toFixed(1)}% confidence &middot; Score: ${d.score?.toFixed(1)}%</div>
                 </div>
-                <div class="verdict-meta">
-                    <div>${d.originalName || 'Unknown'}</div>
-                    <div>${d.timestamp ? new Date(d.timestamp * 1000).toLocaleString() : ''}</div>
-                    <div style="margin-top:4px;">Case: ${d.fileId?.slice(0,8) || '---'}</div>
+                <div style="text-align:right;">
+                    <div style="font-size:10px;color:#888;letter-spacing:1px;margin-bottom:4px;">RISK LEVEL</div>
+                    <div style="font-size:24px;font-weight:900;color:${riskColor};letter-spacing:1px;">${riskLevel}</div>
+                    <div style="font-size:11px;color:#666;margin-top:4px;">${d.originalName || 'Unknown'} &middot; Case: ${d.fileId?.slice(0,8) || '---'}</div>
                 </div>
             </div>`
+
+            // ═══ DETECTED INDICATORS ═══
+            if (media === 'image') {
+                const indicators = []
+                if (d.modelScore != null && d.modelScore > 50) indicators.push({text: 'AI-generation probability high', level: 'high'})
+                else if (d.modelScore != null && d.modelScore > 25) indicators.push({text: 'AI-generation probability moderate', level: 'med'})
+                if (d.elaAdvanced != null && d.elaAdvanced > 40) indicators.push({text: 'ELA irregularity detected', level: 'high'})
+                if (d.freqScore != null && d.freqScore > 40) indicators.push({text: 'Frequency spectrum anomaly', level: 'high'})
+                if (d.noiseScore != null && d.noiseScore > 40) indicators.push({text: 'Synthetic noise pattern detected', level: 'high'})
+                else if (d.noiseScore != null && d.noiseScore > 20) indicators.push({text: 'Noise consistency anomaly', level: 'med'})
+                if (d.ghostScore != null && d.ghostScore > 30) indicators.push({text: 'Compression anomaly detected', level: 'med'})
+                if (d.gradientScore != null && d.gradientScore > 30) indicators.push({text: 'Gradient smoothing detected', level: 'med'})
+                if (d.caScore != null && d.caScore > 25) indicators.push({text: 'No chromatic aberration (AI signature)', level: 'med'})
+                if (d.qtOrigin === 'library') indicators.push({text: 'Library-encoded JPEG (non-camera source)', level: 'med'})
+                if (d.exifLabel === 'AI_TOOL') indicators.push({text: 'AI tool identified in metadata', level: 'high'})
+                else if (d.exifLabel === 'EDITED') indicators.push({text: 'Editing software detected in metadata', level: 'med'})
+                else if (d.exifScore > 5) indicators.push({text: 'Metadata anomaly detected', level: 'med'})
+                if (d.exifFlags && d.exifFlags.some(f => f.includes('no camera'))) indicators.push({text: 'Camera metadata missing', level: 'med'})
+
+                // also show positive (authentic) indicators
+                if (d.qtOrigin === 'camera') indicators.push({text: 'Camera-proprietary JPEG encoding confirmed', level: 'good'})
+                if (d.exifLabel === 'CLEAN' && d.exifScore === 0) indicators.push({text: 'Valid camera EXIF metadata present', level: 'good'})
+                if (d.caScore != null && d.caScore === 0 && d.score < 35) indicators.push({text: 'Natural lens characteristics detected', level: 'good'})
+
+                if (indicators.length > 0) {
+                    html += `<div class="detail-card animate-in delay-1" style="margin-bottom:16px;">
+                        <h3 style="display:flex;align-items:center;gap:8px;">
+                            <span class="material-symbols-outlined" style="font-size:18px;color:#f59e0b;">report</span>
+                            Detected Indicators
+                        </h3>`
+                    indicators.forEach(ind => {
+                        const dotCls = ind.level === 'high' ? 'high' : ind.level === 'med' ? 'med' : 'low'
+                        const icon = ind.level === 'good' ? '&#10003;' : ind.level === 'high' ? '&#9888;' : '&#9679;'
+                        const iconColor = ind.level === 'good' ? '#22c55e' : ind.level === 'high' ? '#ef4444' : '#f59e0b'
+                        html += `<div class="reason-line"><span style="color:${iconColor};font-size:14px;width:20px;text-align:center;">${icon}</span>${ind.text}</div>`
+                    })
+                    html += `</div>`
+                }
+            }
 
             // ═══ FORENSIC X-RAY VIEWER (THE HERO FEATURE) ═══
             if (media === 'image') {
@@ -423,7 +462,9 @@
                 if (d.elaAdvanced != null) html += scoreCard('ELA Advanced', d.elaAdvanced, scoreCls(d.elaAdvanced), 'Multi-quality error levels')
                 if (d.ghostScore != null) html += scoreCard('JPEG Ghost', d.ghostScore, scoreCls(d.ghostScore), 'Compression history')
                 if (d.gradientScore != null) html += scoreCard('Gradient', d.gradientScore, scoreCls(d.gradientScore), 'Edge consistency')
+                if (d.caScore != null) html += scoreCard('Chromatic Aberration', d.caScore, scoreCls(d.caScore), 'Lens physics analysis')
                 if (d.pixelScore != null) html += scoreCard('Pixel Statistics', d.pixelScore, scoreCls(d.pixelScore), 'Distribution analysis')
+                if (d.qtScore != null) html += scoreCard('Quantization Table', d.qtScore, scoreCls(d.qtScore), d.qtOrigin ? ('Source: ' + d.qtOrigin) : 'JPEG encoder fingerprint')
             }
 
             if (media === 'video') {
@@ -437,6 +478,63 @@
             }
 
             html += '</div>'
+
+            // ═══ SYSTEM SIGNALS SUMMARY TABLE ═══
+            if (media === 'image') {
+                const signals = [
+                    { name: 'Deepfake AI Model', score: d.modelScore, max: 40, desc: 'Neural network ensemble detection' },
+                    { name: 'ELA Anomaly', score: d.elaAdvanced, max: 20, desc: 'Error level analysis irregularity' },
+                    { name: 'Frequency Spectrum', score: d.freqScore, max: 15, desc: 'FFT spectral domain anomaly' },
+                    { name: 'Noise Consistency', score: d.noiseScore, max: 15, desc: 'Photon noise pattern analysis' },
+                    { name: 'Compression Pattern', score: d.ghostScore, max: 15, desc: 'JPEG ghost / recompression detection' },
+                    { name: 'Gradient Analysis', score: d.gradientScore, max: 10, desc: 'Edge smoothness detection' },
+                    { name: 'Chromatic Aberration', score: d.caScore, max: 10, desc: 'Lens physics verification' },
+                    { name: 'Quantization Forensics', score: d.qtScore, max: 10, desc: 'JPEG encoder source identification' },
+                    { name: 'Metadata Risk', score: d.exifScore, max: 10, desc: 'EXIF / provenance validation' },
+                    { name: 'Pixel Statistics', score: d.pixelScore, max: 10, desc: 'Distribution & Benford analysis' },
+                ]
+
+                html += `<div class="detail-card animate-in delay-4" style="margin-bottom:16px;">
+                    <h3 style="display:flex;align-items:center;gap:8px;">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:#8ab4f8;">monitoring</span>
+                        System Signals — Multi-Signal Detection Matrix
+                    </h3>
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <tr style="border-bottom:1px solid #222;">
+                            <th style="text-align:left;padding:8px 4px;color:#888;font-size:11px;font-weight:600;">SIGNAL</th>
+                            <th style="text-align:center;padding:8px 4px;color:#888;font-size:11px;font-weight:600;">SCORE</th>
+                            <th style="text-align:left;padding:8px 4px;color:#888;font-size:11px;font-weight:600;width:40%;">LEVEL</th>
+                            <th style="text-align:left;padding:8px 4px;color:#888;font-size:11px;font-weight:600;">STATUS</th>
+                        </tr>`
+
+                signals.forEach(sig => {
+                    const v = sig.score != null ? sig.score : 0
+                    const statusText = v > 50 ? 'ALERT' : v > 25 ? 'WARNING' : 'NORMAL'
+                    const statusColor = v > 50 ? '#ef4444' : v > 25 ? '#f59e0b' : '#22c55e'
+                    const barW = Math.min(v, 100)
+                    html += `<tr style="border-bottom:1px solid #1a1a1a;">
+                        <td style="padding:8px 4px;color:#ccc;">${sig.name}</td>
+                        <td style="text-align:center;padding:8px 4px;font-weight:700;color:${statusColor};">${v != null ? v.toFixed(0) : '—'}</td>
+                        <td style="padding:8px 4px;">
+                            <div style="height:6px;background:#1a1a1a;border-radius:3px;overflow:hidden;">
+                                <div style="height:100%;width:${barW}%;background:${statusColor};border-radius:3px;transition:width 1s;"></div>
+                            </div>
+                        </td>
+                        <td style="padding:8px 4px;font-size:11px;font-weight:700;color:${statusColor};letter-spacing:0.5px;">${statusText}</td>
+                    </tr>`
+                })
+
+                html += `<tr style="border-top:2px solid #333;">
+                    <td style="padding:10px 4px;color:#fff;font-weight:800;">FINAL AUTHENTICITY SCORE</td>
+                    <td style="text-align:center;padding:10px 4px;font-weight:900;font-size:18px;color:${riskColor};">${d.score?.toFixed(1)}</td>
+                    <td style="padding:10px 4px;">
+                        <div style="height:8px;background:#1a1a1a;border-radius:4px;overflow:hidden;">
+                            <div style="height:100%;width:${Math.min(d.score||0,100)}%;background:${riskColor};border-radius:4px;transition:width 1.2s;"></div>
+                        </div>
+                    </td>
+                    <td style="padding:10px 4px;font-weight:900;font-size:14px;color:${riskColor};">${d.label}</td>
+                </tr></table></div>`
+            }
 
             // ═══ EXPLANATION ═══
             if (d.explanation) {

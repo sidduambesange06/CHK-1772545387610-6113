@@ -586,6 +586,191 @@ def pixel_statistics(image_path):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+#  CHROMATIC ABERRATION ANALYSIS
+# ═══════════════════════════════════════════════════════════════════════════
+
+def chromatic_aberration_analysis(image_path):
+    """Detect chromatic aberration (color fringing) at edges.
+
+    Real camera lenses produce different refraction per wavelength,
+    causing R/G/B channels to misalign at high-contrast edges.
+    AI-generated images have perfectly aligned color channels.
+
+    This is a strong forensic signal:
+    - Real photos: channels decorrelated at edges (CA present)
+    - AI images: channels nearly identical at edges (no CA)
+    """
+    img = Image.open(image_path).convert('RGB')
+    max_dim = 1024
+    if max(img.size) > max_dim:
+        ratio = max_dim / max(img.size)
+        img = img.resize((int(img.width * ratio), int(img.height * ratio)), Image.LANCZOS)
+
+    arr = np.array(img, dtype=float)
+    r, g, b = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2]
+
+    # Find strong edges using grayscale gradient
+    gray = np.mean(arr, axis=2)
+    gx = np.pad(np.diff(gray, axis=1), ((0, 0), (0, 1)), mode='edge')
+    gy = np.pad(np.diff(gray, axis=0), ((0, 1), (0, 0)), mode='edge')
+    edges = np.sqrt(gx ** 2 + gy ** 2)
+
+    threshold = np.percentile(edges, 92)
+    strong = edges > threshold
+
+    if np.sum(strong) < 200:
+        return 0, {}
+
+    # Per-channel edge gradients at strong edge locations
+    r_gx = np.pad(np.diff(r, axis=1), ((0, 0), (0, 1)), mode='edge')
+    g_gx = np.pad(np.diff(g, axis=1), ((0, 0), (0, 1)), mode='edge')
+    b_gx = np.pad(np.diff(b, axis=1), ((0, 0), (0, 1)), mode='edge')
+
+    r_e = r_gx[strong]
+    g_e = g_gx[strong]
+    b_e = b_gx[strong]
+
+    # Cross-channel correlation at edges
+    rg = abs(float(np.corrcoef(r_e, g_e)[0, 1]))
+    rb = abs(float(np.corrcoef(r_e, b_e)[0, 1]))
+    gb = abs(float(np.corrcoef(g_e, b_e)[0, 1]))
+    avg_corr = (rg + rb + gb) / 3
+
+    # Per-channel edge magnitude variation
+    mags = [float(np.std(r_e)), float(np.std(g_e)), float(np.std(b_e))]
+    mag_cv = float(np.std(mags) / (np.mean(mags) + 1e-10))
+
+    score = 0
+
+    # Very high correlation = no chromatic aberration = likely AI
+    if avg_corr > 0.997:
+        score += 30
+    elif avg_corr > 0.990:
+        score += 18
+    elif avg_corr > 0.980:
+        score += 8
+    elif avg_corr < 0.950:
+        score -= 10  # strong CA = real camera
+
+    # Channels too similar in magnitude = AI
+    if mag_cv < 0.015:
+        score += 20
+    elif mag_cv < 0.04:
+        score += 10
+    elif mag_cv > 0.12:
+        score -= 5  # different per channel = real lens
+
+    details = {
+        'avgEdgeCorrelation': round(avg_corr, 4),
+        'channelMagCV': round(mag_cv, 4),
+    }
+
+    return max(0, min(100, score)), details
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  JPEG QUANTIZATION TABLE FORENSICS (Engine 4: Source Identifier)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def jpeg_quantization_forensics(image_path):
+    """Analyze JPEG quantization tables to identify image source.
+
+    Every JPEG has quantization tables (DQT) that fingerprint the encoder:
+    - Camera manufacturers use PROPRIETARY tables (Canon, Samsung, Apple, etc.)
+    - PIL/Pillow uses standard IJG tables
+    - OpenCV uses its own standard tables
+    - AI generators (DALL-E, Midjourney) save through PIL → standard tables
+
+    This is a powerful forensic signal because AI-generated images are
+    almost always saved through Python imaging libraries, not cameras.
+
+    Returns: (score 0-100, origin_label, details_dict)
+    """
+    try:
+        img = Image.open(image_path)
+
+        # Only works for JPEG files
+        if not hasattr(img, 'quantization') or not img.quantization:
+            return 0, 'non_jpeg', {}
+
+        qt = img.quantization
+        luma_table = list(qt.get(0, []))
+        chroma_table = list(qt.get(1, [])) if 1 in qt else []
+
+        if len(luma_table) < 64:
+            return 0, 'invalid_qt', {}
+
+        # ── Known standard library quantization signatures ──
+        # PIL/Pillow quality 75-95 luminance tables have specific fingerprints
+        # We check: table uniformity, value distribution, and specific positions
+
+        # Metric 1: Table entropy (camera tables have more variation)
+        unique_vals = len(set(luma_table))
+        total_range = max(luma_table) - min(luma_table) + 1
+
+        # Metric 2: Low-frequency coefficients pattern
+        # Standard tables: DC coefficient (position 0) is typically small (2-8)
+        # Camera tables: DC coefficient varies more widely
+        dc_val = luma_table[0]
+
+        # Metric 3: High-frequency coefficient ratio
+        # Standard tables increase smoothly; camera tables have irregular jumps
+        low_freq = np.mean(luma_table[:16])
+        high_freq = np.mean(luma_table[48:])
+        freq_ratio = high_freq / (low_freq + 1e-10)
+
+        # Metric 4: Adjacent coefficient smoothness
+        diffs = [abs(luma_table[i+1] - luma_table[i]) for i in range(63)]
+        smoothness = np.std(diffs)
+
+        score = 0
+        origin = 'unknown'
+
+        # Standard library signatures (PIL/OpenCV)
+        if unique_vals < 25 and dc_val <= 8:
+            score += 30
+            origin = 'library'
+        elif unique_vals < 35 and dc_val <= 5:
+            score += 20
+            origin = 'library'
+
+        # Smooth frequency ratio = standard table
+        if freq_ratio > 8 and smoothness < 15:
+            score += 25
+            origin = 'library'
+        elif freq_ratio > 5:
+            score += 10
+
+        # Camera-specific patterns (high variation, irregular jumps)
+        if unique_vals > 40 and smoothness > 20:
+            score = max(0, score - 30)  # reduce score — likely camera
+            origin = 'camera'
+        elif unique_vals > 50:
+            score = 0
+            origin = 'camera'
+
+        # Cross-check with chroma table
+        if chroma_table and len(chroma_table) >= 64:
+            chroma_unique = len(set(chroma_table))
+            if chroma_unique < 15:
+                score += 15  # very uniform chroma = standard table
+                origin = 'library'
+
+        details = {
+            'uniqueValues': unique_vals,
+            'dcCoeff': dc_val,
+            'freqRatio': round(freq_ratio, 2),
+            'smoothness': round(smoothness, 2),
+            'origin': origin,
+        }
+
+        return min(100, score), origin, details
+
+    except Exception as e:
+        return 0, 'error', {'error': str(e)}
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 #  EXIF ANALYSIS
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -610,7 +795,7 @@ def check_exif(image_path):
         # valid camera metadata → strong authentic signal
         if has_camera and (focal or exposure) and dt_orig:
             flags.append('valid camera metadata present')
-            return {'exifScore': 0, 'exifFlags': flags, 'exifLabel': 'CLEAN'}
+            return {'exifScore': 0, 'exifFlags': flags, 'exifLabel': 'CLEAN', 'hasAnyExif': True}
 
         # edited by known editing software
         sw_raw = zeroth.get(piexif.ImageIFD.Software, b'')
@@ -620,13 +805,13 @@ def check_exif(image_path):
                          'automatic1111', 'novelai', 'firefly']:
             if ai_tool in sw:
                 flags.append(f'AI tool: {ai_tool}')
-                return {'exifScore': 90, 'exifFlags': flags, 'exifLabel': 'AI_TOOL'}
+                return {'exifScore': 90, 'exifFlags': flags, 'exifLabel': 'AI_TOOL', 'hasAnyExif': True}
 
         for tool in ['photoshop', 'gimp', 'snapseed', 'lightroom', 'facetune',
                       'meitu', 'canva', 'picsart', 'afterlight']:
             if tool in sw:
                 flags.append(f'edited with {tool}')
-                return {'exifScore': 50, 'exifFlags': flags, 'exifLabel': 'EDITED'}
+                return {'exifScore': 50, 'exifFlags': flags, 'exifLabel': 'EDITED', 'hasAnyExif': True}
 
         # timestamp mismatch
         dt_mod = zeroth.get(piexif.ImageIFD.DateTime)
@@ -653,11 +838,11 @@ def check_exif(image_path):
             score = 10
 
         label = 'SUSPICIOUS' if score > 40 else 'CLEAN'
-        return {'exifScore': min(score, 100), 'exifFlags': flags, 'exifLabel': label}
+        return {'exifScore': min(score, 100), 'exifFlags': flags, 'exifLabel': label, 'hasAnyExif': True}
 
     except Exception:
-        # no EXIF at all — this is normal for web images, minimal penalty
-        return {'exifScore': 10, 'exifFlags': ['no metadata (common for web images)'], 'exifLabel': 'CLEAN'}
+        # no EXIF at all — AI-generated images never have EXIF headers
+        return {'exifScore': 10, 'exifFlags': ['no metadata (common for web images)'], 'exifLabel': 'CLEAN', 'hasAnyExif': False}
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -665,9 +850,10 @@ def check_exif(image_path):
 # ═══════════════════════════════════════════════════════════════════════════
 
 def run_deepfake_model(image_path):
-    """Run ensemble of models. Returns score (0-100) where higher = more likely fake/AI."""
+    """Run ensemble of models. Returns (score, models_used, individual_scores)."""
     scores = []
     models_used = []
+    individual = {}
 
     for model, name in [(_img_model_primary, 'organika'), (_img_model_secondary, 'dima806')]:
         if model is None:
@@ -688,29 +874,32 @@ def run_deepfake_model(image_path):
             if fake_score is not None:
                 scores.append(fake_score)
                 models_used.append(name)
+                individual[name] = fake_score
             elif real_score is not None:
                 scores.append(100 - real_score)
                 models_used.append(name)
+                individual[name] = 100 - real_score
             elif results:
-                # Unknown label: binary classifier — pick the label with highest score
-                # and treat it as "fake" confidence only if it's > 50 (model leans fake)
-                # otherwise lean real. This avoids the inverted-fallback bug.
                 top_score = results[0]['score'] * 100
-                scores.append(top_score if top_score > 50 else 100 - top_score)
+                s = top_score if top_score > 50 else 100 - top_score
+                scores.append(s)
                 models_used.append(name)
+                individual[name] = s
 
         except Exception as e:
             print(f'[model:{name}] error: {e}')
 
     if not scores:
-        return None, []
+        return None, [], {}
 
     if len(scores) == 1:
-        return round(scores[0], 2), models_used
+        return round(scores[0], 2), models_used, individual
 
-    # dima806 is the RELIABLE model (secondary, index 1 if both loaded)
-    # organika always says 95-99% artificial — unreliable alone but useful as boost
-    # Strategy: trust dima806 as primary, let organika boost ONLY when dima806 agrees
+    # dima806 is trained on face deepfakes — reliable for face swaps
+    # organika/sdxl-detector is trained on AI-generated images — reliable for
+    # Stable Diffusion / DALL-E / Midjourney / Gemini but has high false-positive rate
+    # Strategy: dima806 leads, but organika gets credit when dima806 agrees
+    # The EXIF cross-reference in analyze_image handles the false-positive problem
     dima_score = scores[-1]   # dima806 loaded second
     orga_score = scores[0]    # organika loaded first
 
@@ -721,11 +910,12 @@ def run_deepfake_model(image_path):
         # dima806 uncertain but organika very confident → cautious boost
         result = round(dima_score * 0.6 + orga_score * 0.15 + 10, 2)
     else:
-        # dima806 says real — trust it, ignore organika
+        # dima806 says real — base ensemble trusts dima806
+        # BUT analyze_image will cross-check organika + EXIF metadata
         result = round(dima_score, 2)
 
     print(f'[model:ensemble] orga={orga_score:.1f} dima={dima_score:.1f} result={result}')
-    return result, models_used
+    return result, models_used, individual
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -752,7 +942,7 @@ def analyze_image(image_path):
     heatmap = ela_to_base64(ela_img)
 
     # ── ENGINE 1: NEURAL FINGERPRINT (AI models) ──────────────────────
-    model_score, models_used = run_deepfake_model(image_path)
+    model_score, models_used, individual_scores = run_deepfake_model(image_path)
 
     # ── ENGINE 2: PHYSICS VALIDATOR (forensic algorithms) ─────────────
     ela_score, ela_metrics = multi_quality_ela(image_path)
@@ -767,14 +957,20 @@ def analyze_image(image_path):
     file_hash = hash_file(image_path)
     exif_score = exif_data['exifScore']
 
+    # ── ENGINE 4: CHROMATIC ABERRATION (lens physics) ──────────────
+    ca_score, ca_details = chromatic_aberration_analysis(image_path)
+
+    # ── ENGINE 5: JPEG QUANTIZATION TABLE (source identifier) ────────
+    qt_score, qt_origin, qt_details = jpeg_quantization_forensics(image_path)
+
     print(f'[analyze] raw signals: model={model_score} ela={ela_score} freq={freq_score} '
           f'noise={noise_score} pixel={pixel_score} ghost={ghost_score} '
-          f'gradient={gradient_score} exif={exif_score}')
+          f'gradient={gradient_score} ca={ca_score} exif={exif_score} qt={qt_score}({qt_origin})')
 
     # ── NO NORMALIZATION — use raw scores directly ─────────────────
 
     # ── CROSS-EXAMINATION: 3-engine verdict ────────────────────────
-    forensic_scores = [freq_score, noise_score, ela_score, ghost_score, gradient_score]
+    forensic_scores = [freq_score, noise_score, ela_score, ghost_score, gradient_score, ca_score]
     forensic_avg = np.mean(forensic_scores)
     strong_forensic = sum(1 for s in forensic_scores if s > 50)
     moderate_forensic = sum(1 for s in forensic_scores if s > 30)
@@ -879,6 +1075,76 @@ def analyze_image(image_path):
     if exif_data['exifLabel'] == 'EDITED':
         final = max(final, 42)
 
+    # ── AI GENERATION DETECTION (multi-signal cross-reference) ──
+    orga_raw = individual_scores.get('organika', 0)
+
+    # Binary-level EXIF check: read raw JPEG header bytes
+    # Camera JPEGs: start with FFD8 FFE1 and contain "Exif" marker
+    # AI/PIL-saved JPEGs: start with FFD8 FFE0 (JFIF only, no Exif marker)
+    # This is MORE reliable than piexif.load() which can succeed for both
+    has_exif_binary = False
+    try:
+        with open(image_path, 'rb') as _f:
+            _hdr = _f.read(24)
+        has_exif_binary = b'Exif' in _hdr
+    except Exception:
+        pass
+
+    is_png = image_path.lower().endswith('.png')
+
+    # Strategy 1: organika confident + JPEG with NO Exif binary marker
+    # Camera photos ALWAYS embed "Exif" in the JPEG header
+    # AI images saved by PIL/libraries use JFIF without Exif
+    if orga_raw > 85 and not has_exif_binary and not is_png and exif_data['exifLabel'] != 'EDITED':
+        ai_override = round(orga_raw * 0.72, 2)
+        if ai_override > final:
+            print(f'[analyze] AI generation detected: organika={orga_raw:.1f}% + no Exif binary marker '
+                  f'→ boosting {final:.1f} → {ai_override}')
+            final = ai_override
+            engine1_verdict = 'fake'
+
+    # Strategy 2: PNG format + no camera EXIF
+    # Real cameras NEVER save as PNG — they always save JPEG/HEIF
+    # AI generators (Gemini, DALL-E, Midjourney) typically output PNG
+    if is_png and not has_valid_camera_exif and exif_data['exifLabel'] != 'EDITED':
+        png_base = 50
+        if forensic_avg > 15:
+            png_base += min(forensic_avg * 0.8, 20)
+        if orga_raw > 3:
+            png_base += min(orga_raw * 0.3, 10)
+        png_boost = round(min(png_base, 78), 2)
+        if png_boost > final:
+            print(f'[analyze] PNG provenance signal: PNG + no camera EXIF + forensic_avg={forensic_avg:.1f} '
+                  f'→ boosting {final:.1f} → {png_boost}')
+            final = png_boost
+            engine3_verdict = 'suspicious'
+
+    # Strategy 3: JPEG Quantization Table confirms library/AI origin
+    # Camera JPEGs have proprietary quantization tables unique to each manufacturer
+    # AI-generated images saved via PIL/OpenCV use standard IJG tables
+    if qt_origin == 'library' and not has_exif_binary and exif_data['exifLabel'] != 'EDITED':
+        qt_boost_base = 55
+        if orga_raw > 50:
+            qt_boost_base += min(orga_raw * 0.25, 20)
+        if forensic_avg > 15:
+            qt_boost_base += min(forensic_avg * 0.3, 10)
+        qt_boost = round(min(qt_boost_base, 82), 2)
+        if qt_boost > final:
+            print(f'[analyze] Quantization table forensics: library origin + no Exif '
+                  f'→ boosting {final:.1f} → {qt_boost}')
+            final = qt_boost
+            engine3_verdict = 'suspicious'
+
+    # Strategy 4: Camera quantization table protects authentic images
+    # If quantization tables match camera-proprietary patterns, dampen false positives
+    if qt_origin == 'camera' and has_exif_binary and final > 30:
+        old_final = final
+        final = min(final, 30)
+        if old_final != final:
+            print(f'[analyze] Camera quantization table + Exif confirmed '
+                  f'→ dampening {old_final:.1f} → {final}')
+            engine3_verdict = 'authentic'
+
     final = round(min(100, max(0, final)), 2)
 
     # ── VERDICT ────────────────────────────────────────────────────
@@ -901,7 +1167,9 @@ def analyze_image(image_path):
         'ela': ('ELA Analysis', ela_score),
         'ghost': ('JPEG Ghost', ghost_score),
         'gradient': ('Gradient Analysis', gradient_score),
+        'ca': ('Chromatic Aberration', ca_score),
         'exif': ('EXIF Metadata', exif_score),
+        'quantization': ('Quantization Table', qt_score),
     }
 
     for key, (name, val) in signal_labels.items():
@@ -989,9 +1257,14 @@ def analyze_image(image_path):
         'pixelScore': pixel_score,
         'ghostScore': ghost_score,
         'gradientScore': gradient_score,
+        'caScore': ca_score,
+        'caDetails': ca_details,
         'exifScore': exif_data['exifScore'],
         'exifFlags': exif_data['exifFlags'],
         'exifLabel': exif_data['exifLabel'],
+        'qtScore': qt_score,
+        'qtOrigin': qt_origin,
+        'qtDetails': qt_details,
         'freqDetails': freq_details,
         'modelsUsed': models_used,
         'heatmapBase64': heatmap,
@@ -1034,7 +1307,7 @@ def analyze_video(video_path, sample_rate=10):
         if idx % sample_rate == 0:
             tmp = f'temp/frame_{idx}.jpg'
             cv2.imwrite(tmp, frame)
-            s, _ = run_deepfake_model(tmp)
+            s, _, _ = run_deepfake_model(tmp)
             if s is not None:
                 scores.append(s)
             if os.path.exists(tmp):

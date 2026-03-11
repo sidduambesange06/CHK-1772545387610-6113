@@ -51,16 +51,16 @@ app.get('/api/health', async (req, res) => {
 // serve frontend in production (single deploy — no separate static server needed)
 const frontendPath = path.join(__dirname, '..', 'frontend')
 
-// Root always redirects to login — auth guard on each page handles the rest
+// Root goes to index (landing page)
 app.get('/', (req, res) => {
-  res.redirect('/login.html')
+  res.sendFile(path.join(frontendPath, 'index.html'))
 })
 
 app.use(express.static(frontendPath))
 
-// SPA fallback: unmatched routes go to login (not index.html)
+// SPA fallback: unmatched routes go to index
 app.get(/^\/(?!api|uploads).*/, (req, res) => {
-  res.sendFile(path.join(frontendPath, 'login.html'))
+  res.sendFile(path.join(frontendPath, 'index.html'))
 })
 
 // catch unhandled errors so server doesnt crash

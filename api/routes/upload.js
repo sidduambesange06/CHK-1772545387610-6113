@@ -41,9 +41,12 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
   const fileId = uuidv4()
   const { filename } = req.file
-  // Use absolute path so analyze.js can find the file regardless of working directory
-  // (critical on Vercel where files live in /tmp, not api/uploads/)
-  const filePath = req.file.path
+  // Use relative path so both analyze.js and frontend URL can use it
+  // analyze.js resolvePath() converts relative → absolute when needed
+  // Vercel: use absolute /tmp path; Local: use relative uploads/filename
+  const filePath = process.env.VERCEL
+    ? req.file.path
+    : 'uploads/' + filename
 
   // compute SHA-256 hash of the file for evidence chain
   const fileBuffer = fs.readFileSync(req.file.path)
