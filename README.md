@@ -345,6 +345,3 @@ This project is created for the Chakravyuh 2.0 hackathon.
 
 For issues or questions, please refer to the API documentation at `http://localhost:8000/docs` or check the logs in `backend/logs/app.log`.
 
----
-
-**Good luck with the hackathon! 🚀**
